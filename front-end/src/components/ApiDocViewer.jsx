@@ -47,15 +47,14 @@ const ApiDocViewer = ({ apiDoc }) => {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-md border border-line bg-white p-5 shadow-soft">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="rounded-md border border-line bg-white px-4 py-3 shadow-soft">
+        <div className="flex flex-wrap items-center gap-2">
           <MethodBadge method={apiDoc.method} />
-          <code className="break-all rounded bg-slate-100 px-3 py-1 text-sm font-semibold text-ink">{apiDoc.endpoint}</code>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{getStatusLabel(apiDoc.status)}</span>
+          <code className="break-all rounded bg-slate-100 px-2.5 py-1 text-sm font-semibold text-ink">{apiDoc.endpoint}</code>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{getStatusLabel(apiDoc.status)}</span>
+          <span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-accent">{apiDoc.tag || "General"}</span>
         </div>
-        <h2 className="mt-4 text-2xl font-bold text-ink">{apiDoc.name}</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">{apiDoc.description || "Chưa có mô tả."}</p>
-        <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Tag: {apiDoc.tag || "General"}</p>
+        <p className="mt-3 text-sm leading-6 text-slate-600">{apiDoc.description || "Chưa có mô tả."}</p>
       </div>
 
       <FieldTable title="Headers" rows={apiDoc.headers} showValue />

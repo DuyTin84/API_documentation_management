@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Save, X } from "lucide-react";
 import FieldEditor from "./FieldEditor";
 import ResponseEditor from "./ResponseEditor";
@@ -10,13 +10,15 @@ const initialForm = {
   description: "",
   method: "GET",
   endpoint: "",
-  tag: "General",
+  tag: "",
   status: "draft",
   headers: [],
   pathParams: [],
   queryParams: [],
   requestBody: "{\n  \n}",
-  responses: [{ statusCode: 200, description: "Phản hồi thành công", body: "{\n  \n}" }],
+  responses: [
+    { statusCode: 200, description: "Phản hồi thành công", body: "{\n  \n}" },
+  ],
 };
 
 const formatJson = (value) => JSON.stringify(value ?? {}, null, 2);
@@ -30,9 +32,78 @@ const validateFields = (items, label) => {
   });
 };
 
-const methodOptions = METHODS.map((method) => ({ value: method, label: method }));
+const methodOptions = METHODS.map((method) => ({
+  value: method,
+  label: method,
+}));
 
-const ApiForm = ({ apiDoc, onSubmit, onCancel, saving }) => {
+const TagInput = ({ value, options, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+
+  const normalizedOptions = useMemo(() => {
+    return [...new Set(["General", ...options].map((option) => option?.trim()).filter(Boolean))].sort((first, second) => first.localeCompare(second));
+  }, [options]);
+
+  const filteredOptions = useMemo(() => {
+    const keyword = value.trim().toLowerCase();
+    if (!keyword) {
+      return normalizedOptions;
+    }
+
+    return normalizedOptions.filter((option) => option.toLowerCase().includes(keyword));
+  }, [normalizedOptions, value]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (rootRef.current && !rootRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <input
+        className="input"
+        value={value}
+        onChange={(event) => {
+          onChange(event.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        placeholder="Chọn hoặc nhập tag"
+        maxLength={80}
+      />
+
+      {open && filteredOptions.length > 0 ? (
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-40 max-h-56 overflow-auto rounded-md border border-line bg-white p-1 shadow-xl">
+          {filteredOptions.map((option) => (
+            <button
+              type="button"
+              key={option}
+              className={`flex w-full items-center rounded px-3 py-2 text-left text-sm transition ${
+                option === value ? "bg-teal-50 font-semibold text-accent" : "text-slate-700 hover:bg-slate-50"
+              }`}
+              onClick={() => {
+                onChange(option);
+                setOpen(false);
+              }}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+    </div>
+  );
+};
+
+const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => {
   const [form, setForm] = useState(initialForm);
   const [error, setError] = useState("");
 
@@ -89,29 +160,48 @@ const ApiForm = ({ apiDoc, onSubmit, onCancel, saving }) => {
       JSON.parse(form.requestBody || "{}");
       form.responses.forEach((response) => {
         const statusCode = Number(response.statusCode);
-        if (!Number.isInteger(statusCode) || statusCode < 100 || statusCode > 599) {
-          throw new Error("Status code của response phải nằm trong khoảng 100 đến 599");
+        if (
+          !Number.isInteger(statusCode) ||
+          statusCode < 100 ||
+          statusCode > 599
+        ) {
+          throw new Error(
+            "Status code của response phải nằm trong khoảng 100 đến 599",
+          );
         }
         JSON.parse(response.body || "{}");
       });
 
-      await onSubmit(form);
+      await onSubmit({ ...form, tag: form.tag.trim() || "General" });
     } catch (submitError) {
-      setError(submitError.message === "Unexpected end of JSON input" ? "Nội dung JSON không hợp lệ" : submitError.message);
+      setError(
+        submitError.message === "Unexpected end of JSON input"
+          ? "Nội dung JSON không hợp lệ"
+          : submitError.message,
+      );
     }
   };
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-      {error ? <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
+      {error ? (
+        <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {error}
+        </div>
+      ) : null}
 
       <section className="rounded-md border border-line bg-white p-4">
-        <div className="grid gap-4 md:grid-cols-[160px_1fr]">
-          <div>
+        <div className="grid gap-4 lg:grid-cols-12">
+          <div className="lg:col-span-2">
             <label className="label">Method</label>
-            <SelectField value={form.method} options={methodOptions} onChange={(value) => update("method", value)} placeholder="Method" />
+            <SelectField
+              value={form.method}
+              options={methodOptions}
+              onChange={(value) => update("method", value)}
+              placeholder="Method"
+            />
           </div>
-          <div>
+          <div className="lg:col-span-7">
             <label className="label">Endpoint</label>
             <input
               className="input"
@@ -122,10 +212,17 @@ const ApiForm = ({ apiDoc, onSubmit, onCancel, saving }) => {
               required
             />
           </div>
-        </div>
+          <div className="lg:col-span-3">
+            <label className="label">Trạng thái</label>
+            <SelectField
+              value={form.status}
+              options={STATUSES}
+              onChange={(value) => update("status", value)}
+              placeholder="Status"
+            />
+          </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div>
+          <div className="lg:col-span-6">
             <label className="label">Tên API</label>
             <input
               className="input"
@@ -137,34 +234,54 @@ const ApiForm = ({ apiDoc, onSubmit, onCancel, saving }) => {
               required
             />
           </div>
-          <div>
+          <div className="lg:col-span-6">
             <label className="label">Tag / Module</label>
-            <input className="input" value={form.tag} onChange={(event) => update("tag", event.target.value)} placeholder="Users" maxLength={80} required />
+            <TagInput value={form.tag} options={availableTags} onChange={(value) => update("tag", value)} />
           </div>
-        </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-[1fr_180px]">
-          <div>
+          <div className="lg:col-span-12">
             <label className="label">Mô tả</label>
-            <textarea className="textarea" value={form.description} onChange={(event) => update("description", event.target.value)} maxLength={1000} />
-          </div>
-          <div>
-            <label className="label">Trạng thái</label>
-            <SelectField value={form.status} options={STATUSES} onChange={(value) => update("status", value)} placeholder="Status" />
+            <textarea
+              className="textarea min-h-24"
+              value={form.description}
+              onChange={(event) => update("description", event.target.value)}
+              maxLength={1000}
+            />
           </div>
         </div>
       </section>
 
-      <FieldEditor title="Headers" value={form.headers} onChange={(value) => update("headers", value)} showValue />
-      <FieldEditor title="Path Params" value={form.pathParams} onChange={(value) => update("pathParams", value)} />
-      <FieldEditor title="Query Params" value={form.queryParams} onChange={(value) => update("queryParams", value)} />
+      <FieldEditor
+        title="Headers"
+        value={form.headers}
+        onChange={(value) => update("headers", value)}
+        showValue
+      />
+      <FieldEditor
+        title="Path Params"
+        value={form.pathParams}
+        onChange={(value) => update("pathParams", value)}
+      />
+      <FieldEditor
+        title="Query Params"
+        value={form.queryParams}
+        onChange={(value) => update("queryParams", value)}
+      />
 
       <section className="rounded-md border border-line bg-white p-4">
         <label className="label">Request Body JSON</label>
-        <textarea className="textarea min-h-52 font-mono" value={form.requestBody} onChange={(event) => update("requestBody", event.target.value)} required />
+        <textarea
+          className="textarea min-h-52 font-mono"
+          value={form.requestBody}
+          onChange={(event) => update("requestBody", event.target.value)}
+          required
+        />
       </section>
 
-      <ResponseEditor value={form.responses} onChange={(value) => update("responses", value)} />
+      <ResponseEditor
+        value={form.responses}
+        onChange={(value) => update("responses", value)}
+      />
 
       <div className="sticky bottom-0 flex justify-end gap-3 border-t border-line bg-panel py-4">
         <button type="button" className="btn btn-muted" onClick={onCancel}>

@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Edit3, FilePlus2, Filter, Search, Trash2 } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, FilePlus2, Filter, Search, Trash2 } from "lucide-react";
 import AppLayout from "../layouts/AppLayout";
-import ApiDocViewer from "../components/ApiDocViewer";
-import ApiForm from "../components/ApiForm";
 import EmptyState from "../components/EmptyState";
 import MethodBadge from "../components/MethodBadge";
 import SelectField from "../components/SelectField";
 import { useFeedback } from "../hooks/useFeedback";
-import { METHODS, STATUSES } from "../utils/constants";
+import { getStatusLabel, METHODS, STATUSES } from "../utils/constants";
 import * as apiDocService from "../services/apiDocService";
 import * as projectService from "../services/projectService";
 
@@ -17,14 +15,12 @@ const statusFilterOptions = [{ value: "", label: "All statuses" }, ...STATUSES];
 
 const ProjectDetail = () => {
   const { projectId } = useParams();
+  const navigate = useNavigate();
   const { toast, confirm } = useFeedback();
   const [project, setProject] = useState(null);
   const [apiDocs, setApiDocs] = useState([]);
-  const [selectedApi, setSelectedApi] = useState(null);
-  const [mode, setMode] = useState("view");
   const [filters, setFilters] = useState({ search: "", method: "", status: "", tag: "" });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const tags = useMemo(() => {
@@ -51,13 +47,6 @@ const ProjectDetail = () => {
     const params = Object.fromEntries(Object.entries(nextFilters).filter(([, value]) => value));
     const response = await apiDocService.getApiDocs(projectId, params);
     setApiDocs(response.data);
-
-    if (response.data.length > 0) {
-      const stillSelected = selectedApi && response.data.find((apiDoc) => apiDoc._id === selectedApi._id);
-      setSelectedApi(stillSelected || response.data[0]);
-    } else {
-      setSelectedApi(null);
-    }
   };
 
   const loadAll = async () => {
@@ -87,46 +76,12 @@ const ProjectDetail = () => {
     }
   };
 
-  const submitApi = async (form) => {
-    setSaving(true);
-    setError("");
-
-    try {
-      const payload = {
-        ...form,
-        requestBody: form.requestBody || "{}",
-        responses: form.responses.map((response) => ({
-          ...response,
-          body: response.body || "{}",
-        })),
-      };
-
-      const isEditing = mode === "edit" && selectedApi;
-      const response = isEditing
-        ? await apiDocService.updateApiDoc(selectedApi._id, payload)
-        : await apiDocService.createApiDoc(projectId, payload);
-
-      await loadApiDocs();
-      setSelectedApi(response.data);
-      setMode("view");
-      toast.success(isEditing ? "Đã cập nhật API" : "Đã tạo API", "Tài liệu API đã được lưu.");
-    } catch (submitError) {
-      setError(submitError.message);
-      toast.error(mode === "edit" ? "Cập nhật API thất bại" : "Tạo API thất bại", submitError.message);
-      throw submitError;
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const deleteSelectedApi = async () => {
-    if (!selectedApi) {
-      return;
-    }
+  const deleteApi = async (event, apiDoc) => {
+    event.stopPropagation();
 
     const approved = await confirm({
       title: "Xóa tài liệu API?",
-      message: "Endpoint này sẽ bị xóa khỏi project. Thao tác này không thể hoàn tác.",
+      message: `${apiDoc.endpoint} sẽ bị xóa khỏi project. Thao tác này không thể hoàn tác.`,
       confirmText: "Xóa API",
       cancelText: "Hủy",
       variant: "danger",
@@ -137,9 +92,7 @@ const ProjectDetail = () => {
     }
 
     try {
-      await apiDocService.deleteApiDoc(selectedApi._id);
-      setSelectedApi(null);
-      setMode("view");
+      await apiDocService.deleteApiDoc(apiDoc._id);
       await loadApiDocs();
       toast.success("Đã xóa API", "Tài liệu API đã được xóa khỏi project.");
     } catch (deleteError) {
@@ -150,124 +103,110 @@ const ProjectDetail = () => {
 
   return (
     <AppLayout>
-      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <Link to="/" className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-accent">
-            <ArrowLeft size={16} />
-            Quay lại danh sách project
-          </Link>
-          <h1 className="text-3xl font-black text-ink">{project?.name || "Dự án"}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">{project?.description || "Chưa có mô tả."}</p>
-          {project?.baseUrl ? <code className="mt-3 inline-block rounded bg-white px-3 py-1 text-xs font-semibold text-slate-700">{project.baseUrl}</code> : null}
-        </div>
-        <button className="btn btn-primary" onClick={() => setMode("create")}>
-          <FilePlus2 size={17} />
-          Tạo API
-        </button>
+      <div className="mb-5">
+        <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-accent">
+          <ArrowLeft size={16} />
+          Quay lại danh sách project
+        </Link>
       </div>
 
       {error ? <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
-      <div className="grid gap-5 lg:grid-cols-[360px_1fr]">
-        <aside className="h-fit rounded-md border border-line bg-white shadow-soft lg:sticky lg:top-20">
-          <div className="border-b border-line p-4">
+      <div className="grid gap-5 lg:grid-cols-[340px_1fr]">
+        <aside className="space-y-4">
+          <section className="rounded-md border border-line bg-white p-5 shadow-soft">
+            <p className="text-xs font-bold uppercase tracking-wide text-accent">Project</p>
+            <h1 className="mt-2 text-2xl font-black text-ink">{project?.name || "Dự án"}</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-500">{project?.description || "Chưa có mô tả."}</p>
+            {project?.baseUrl ? <code className="mt-3 inline-block max-w-full truncate rounded bg-panel px-3 py-1 text-xs font-semibold text-slate-700">{project.baseUrl}</code> : null}
+          </section>
+
+          <section className="rounded-md border border-line bg-white p-4 shadow-soft">
+            <p className="mb-3 text-sm font-bold text-ink">Bộ lọc endpoint</p>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-2.5 text-slate-400" size={18} />
-              <input
-                className="input pl-10"
-                placeholder="Tìm endpoint..."
-                value={filters.search}
-                onChange={(event) => changeFilter("search", event.target.value)}
-              />
+              <input className="input pl-10" placeholder="Tìm endpoint..." value={filters.search} onChange={(event) => changeFilter("search", event.target.value)} />
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div className="relative">
                 <Filter className="pointer-events-none absolute left-3 top-2.5 text-slate-400" size={16} />
-                <SelectField
-                  value={filters.method}
-                  options={methodFilterOptions}
-                  onChange={(value) => changeFilter("method", value)}
-                  buttonClassName="pl-9"
-                  placeholder="All methods"
-                />
+                <SelectField value={filters.method} options={methodFilterOptions} onChange={(value) => changeFilter("method", value)} buttonClassName="pl-9" />
               </div>
-              <SelectField value={filters.status} options={statusFilterOptions} onChange={(value) => changeFilter("status", value)} placeholder="All statuses" />
+              <SelectField value={filters.status} options={statusFilterOptions} onChange={(value) => changeFilter("status", value)} />
             </div>
-            <SelectField className="mt-2" value={filters.tag} options={tagFilterOptions} onChange={(value) => changeFilter("tag", value)} placeholder="All tags" />
-          </div>
-
-          <div className="max-h-[calc(100vh-260px)] overflow-auto p-3">
-            {loading ? (
-              <p className="p-4 text-sm text-slate-500">Đang tải API...</p>
-            ) : apiDocs.length === 0 ? (
-              <p className="p-4 text-sm text-slate-500">Chưa có API phù hợp.</p>
-            ) : (
-              Object.entries(groupedApis).map(([tag, items]) => (
-                <div key={tag} className="mb-4">
-                  <p className="mb-2 px-2 text-xs font-bold uppercase tracking-wide text-slate-500">{tag}</p>
-                  <div className="space-y-2">
-                    {items.map((apiDoc) => (
-                      <button
-                        key={apiDoc._id}
-                        className={`w-full rounded-md border p-3 text-left transition ${
-                          selectedApi?._id === apiDoc._id ? "border-accent bg-teal-50" : "border-line bg-white hover:bg-panel"
-                        }`}
-                        onClick={() => {
-                          setSelectedApi(apiDoc);
-                          setMode("view");
-                        }}
-                      >
-                        <div className="flex items-center gap-2">
-                          <MethodBadge method={apiDoc.method} />
-                          <code className="min-w-0 flex-1 truncate text-xs font-semibold text-ink">{apiDoc.endpoint}</code>
-                        </div>
-                        <p className="mt-2 truncate text-sm font-semibold text-slate-700">{apiDoc.name}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+            <SelectField className="mt-2" value={filters.tag} options={tagFilterOptions} onChange={(value) => changeFilter("tag", value)} />
+          </section>
         </aside>
 
-        <section>
-          {mode === "create" ? (
-            <div>
-              <h2 className="mb-4 text-xl font-black text-ink">Tạo tài liệu API</h2>
-              <ApiForm onSubmit={submitApi} onCancel={() => setMode("view")} saving={saving} />
-            </div>
-          ) : mode === "edit" ? (
-            <div>
-              <h2 className="mb-4 text-xl font-black text-ink">Chỉnh sửa tài liệu API</h2>
-              <ApiForm apiDoc={selectedApi} onSubmit={submitApi} onCancel={() => setMode("view")} saving={saving} />
-            </div>
-          ) : selectedApi ? (
-            <div>
-              <div className="mb-4 flex justify-end gap-2">
-                <button className="btn btn-muted" onClick={() => setMode("edit")}>
-                  <Edit3 size={17} />
-                  Sửa
-                </button>
-                <button className="btn btn-danger" onClick={deleteSelectedApi}>
-                  <Trash2 size={17} />
-                  Xóa
-                </button>
+        <section className="min-w-0">
+          <div className="rounded-md border border-line bg-white shadow-soft">
+            <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-black text-ink">Danh sách endpoint</h2>
+                <p className="mt-1 text-sm text-slate-500">{apiDocs.length} API phù hợp bộ lọc hiện tại.</p>
               </div>
-              <ApiDocViewer apiDoc={selectedApi} />
+              <button className="btn btn-primary" onClick={() => navigate(`/projects/${projectId}/apis/new`)}>
+                <FilePlus2 size={17} />
+                Tạo API
+              </button>
             </div>
-          ) : (
-            <EmptyState
-              title="Chưa chọn API"
-              description="Chọn một endpoint ở thanh bên hoặc tạo tài liệu API mới."
-              action={
-                <button className="btn btn-primary" onClick={() => setMode("create")}>
-                  <FilePlus2 size={17} />
-                  Tạo API
-                </button>
-              }
-            />
-          )}
+
+            <div className="p-4">
+              {loading ? (
+                <p className="p-4 text-sm text-slate-500">Đang tải API...</p>
+              ) : apiDocs.length === 0 ? (
+                <EmptyState title="Chưa có API phù hợp" description="Thay đổi bộ lọc hoặc tạo tài liệu API mới cho project này." />
+              ) : (
+                <div className="space-y-5">
+                  {Object.entries(groupedApis).map(([tag, items]) => (
+                    <section key={tag}>
+                      <div className="mb-2 flex items-center justify-between">
+                        <h3 className="text-sm font-black uppercase tracking-wide text-ink">{tag}</h3>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{items.length} API</span>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-md border border-line">
+                        <table className="min-w-full divide-y divide-line text-sm">
+                          <thead className="bg-panel text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                            <tr>
+                              <th className="w-28 px-4 py-3">Method</th>
+                              <th className="px-4 py-3">Endpoint</th>
+                              <th className="px-4 py-3">Tên API</th>
+                              <th className="w-32 px-4 py-3">Status</th>
+                              <th className="w-16 px-4 py-3"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-line bg-white">
+                            {items.map((apiDoc) => (
+                              <tr key={apiDoc._id} className="cursor-pointer transition hover:bg-panel" onClick={() => navigate(`/projects/${projectId}/apis/${apiDoc._id}`)}>
+                                <td className="px-4 py-3">
+                                  <MethodBadge method={apiDoc.method} />
+                                </td>
+                                <td className="max-w-xs px-4 py-3">
+                                  <code className="block truncate font-bold text-ink">{apiDoc.endpoint}</code>
+                                </td>
+                                <td className="max-w-xs px-4 py-3">
+                                  <span className="block truncate font-semibold text-slate-700">{apiDoc.name}</span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{getStatusLabel(apiDoc.status)}</span>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <button className="btn btn-muted h-9 w-9 px-0 text-rose-600 hover:bg-rose-50" onClick={(event) => deleteApi(event, apiDoc)} title="Xóa API">
+                                    <Trash2 size={16} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </section>
       </div>
     </AppLayout>
