@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Project = require("../models/Project");
 const ApiDoc = require("../models/ApiDoc");
 const { fail } = require("../utils/response");
@@ -22,50 +23,86 @@ const listProjects = async (userId) => {
   }));
 };
 
-const createProject = async (payload, userId) => {
-  if (!payload.name) {
-    fail("Project name is required");
+const normalizeProjectPayload = (payload) => {
+  const name = payload.name?.trim();
+  const description = payload.description?.trim() || "";
+  const baseUrl = payload.baseUrl?.trim() || "";
+
+  if (!name) {
+    fail("Vui lòng nhập tên project");
   }
 
+  if (name.length < 2 || name.length > 120) {
+    fail("Tên project phải có từ 2 đến 120 ký tự");
+  }
+
+  if (description.length > 500) {
+    fail("Mô tả project không được vượt quá 500 ký tự");
+  }
+
+  if (baseUrl) {
+    try {
+      const parsedUrl = new URL(baseUrl);
+      if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+        fail("Base URL phải bắt đầu bằng http:// hoặc https://");
+      }
+    } catch (error) {
+      fail("Base URL không đúng định dạng");
+    }
+  }
+
+  return { name, description, baseUrl };
+};
+
+const createProject = async (payload, userId) => {
+  const data = normalizeProjectPayload(payload);
+
   return Project.create({
-    name: payload.name,
-    description: payload.description || "",
-    baseUrl: payload.baseUrl || "",
+    ...data,
     createdBy: userId,
   });
 };
 
 const getProject = async (projectId, userId) => {
+  if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    fail("Project không hợp lệ");
+  }
+
   const project = await Project.findOne({ _id: projectId, createdBy: userId });
   if (!project) {
-    fail("Project not found", 404);
+    fail("Không tìm thấy project", 404);
   }
 
   return project;
 };
 
 const updateProject = async (projectId, payload, userId) => {
+  if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    fail("Project không hợp lệ");
+  }
+
+  const data = normalizeProjectPayload(payload);
   const project = await Project.findOneAndUpdate(
     { _id: projectId, createdBy: userId },
-    {
-      name: payload.name,
-      description: payload.description || "",
-      baseUrl: payload.baseUrl || "",
-    },
+    data,
     { new: true, runValidators: true }
   );
 
   if (!project) {
-    fail("Project not found", 404);
+    fail("Không tìm thấy project", 404);
   }
 
   return project;
 };
 
 const deleteProject = async (projectId, userId) => {
+  if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    fail("Project không hợp lệ");
+  }
+
   const project = await Project.findOneAndDelete({ _id: projectId, createdBy: userId });
   if (!project) {
-    fail("Project not found", 404);
+    fail("Không tìm thấy project", 404);
   }
 
   await ApiDoc.deleteMany({ projectId });

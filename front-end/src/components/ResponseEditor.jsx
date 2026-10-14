@@ -45,15 +45,14 @@ const ResponseEditor = ({ value, onChange }) => {
                     className="input"
                     value={item.statusCode}
                     onChange={(event) => updateItem(index, "statusCode", event.target.value)}
+                    min={100}
+                    max={599}
+                    required
                   />
                 </div>
                 <div>
                   <label className="label">Mô tả</label>
-                  <input
-                    className="input"
-                    value={item.description}
-                    onChange={(event) => updateItem(index, "description", event.target.value)}
-                  />
+                  <input className="input" value={item.description} onChange={(event) => updateItem(index, "description", event.target.value)} maxLength={500} />
                 </div>
                 <div className="flex items-end">
                   <button type="button" className="btn btn-muted h-10 w-10 px-0" onClick={() => removeItem(index)} title="Xóa response">
@@ -63,11 +62,7 @@ const ResponseEditor = ({ value, onChange }) => {
               </div>
               <div className="mt-3">
                 <label className="label">Body JSON</label>
-                <textarea
-                  className="textarea font-mono"
-                  value={item.body}
-                  onChange={(event) => updateItem(index, "body", event.target.value)}
-                />
+                <textarea className="textarea font-mono" value={item.body} onChange={(event) => updateItem(index, "body", event.target.value)} required />
               </div>
             </div>
           ))

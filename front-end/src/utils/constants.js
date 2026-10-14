@@ -1,10 +1,14 @@
 export const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
 export const STATUSES = [
-  { value: "draft", label: "Bản nháp" },
-  { value: "published", label: "Đã công bố" },
-  { value: "deprecated", label: "Ngừng sử dụng" },
+  { value: "draft", label: "Draft" },
+  { value: "published", label: "Published" },
+  { value: "deprecated", label: "Deprecated" },
 ];
+
+export const FIELD_TYPES = ["string", "number", "boolean", "object", "array"];
+
+export const getStatusLabel = (value) => STATUSES.find((status) => status.value === value)?.label || value;
 
 export const methodColors = {
   GET: "bg-emerald-100 text-emerald-800 border-emerald-200",

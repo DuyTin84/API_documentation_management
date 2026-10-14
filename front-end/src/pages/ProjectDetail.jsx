@@ -6,12 +6,18 @@ import ApiDocViewer from "../components/ApiDocViewer";
 import ApiForm from "../components/ApiForm";
 import EmptyState from "../components/EmptyState";
 import MethodBadge from "../components/MethodBadge";
+import SelectField from "../components/SelectField";
+import { useFeedback } from "../hooks/useFeedback";
 import { METHODS, STATUSES } from "../utils/constants";
 import * as apiDocService from "../services/apiDocService";
 import * as projectService from "../services/projectService";
 
+const methodFilterOptions = [{ value: "", label: "All methods" }, ...METHODS.map((method) => ({ value: method, label: method }))];
+const statusFilterOptions = [{ value: "", label: "All statuses" }, ...STATUSES];
+
 const ProjectDetail = () => {
   const { projectId } = useParams();
+  const { toast, confirm } = useFeedback();
   const [project, setProject] = useState(null);
   const [apiDocs, setApiDocs] = useState([]);
   const [selectedApi, setSelectedApi] = useState(null);
@@ -24,6 +30,8 @@ const ProjectDetail = () => {
   const tags = useMemo(() => {
     return [...new Set(apiDocs.map((apiDoc) => apiDoc.tag).filter(Boolean))].sort();
   }, [apiDocs]);
+
+  const tagFilterOptions = useMemo(() => [{ value: "", label: "All tags" }, ...tags.map((tag) => ({ value: tag, label: tag }))], [tags]);
 
   const groupedApis = useMemo(() => {
     return apiDocs.reduce((groups, apiDoc) => {
@@ -93,16 +101,18 @@ const ProjectDetail = () => {
         })),
       };
 
-      const response =
-        mode === "edit" && selectedApi
-          ? await apiDocService.updateApiDoc(selectedApi._id, payload)
-          : await apiDocService.createApiDoc(projectId, payload);
+      const isEditing = mode === "edit" && selectedApi;
+      const response = isEditing
+        ? await apiDocService.updateApiDoc(selectedApi._id, payload)
+        : await apiDocService.createApiDoc(projectId, payload);
 
       await loadApiDocs();
       setSelectedApi(response.data);
       setMode("view");
+      toast.success(isEditing ? "Đã cập nhật API" : "Đã tạo API", "Tài liệu API đã được lưu.");
     } catch (submitError) {
       setError(submitError.message);
+      toast.error(mode === "edit" ? "Cập nhật API thất bại" : "Tạo API thất bại", submitError.message);
       throw submitError;
     } finally {
       setSaving(false);
@@ -110,7 +120,19 @@ const ProjectDetail = () => {
   };
 
   const deleteSelectedApi = async () => {
-    if (!selectedApi || !window.confirm("Xóa tài liệu API này?")) {
+    if (!selectedApi) {
+      return;
+    }
+
+    const approved = await confirm({
+      title: "Xóa tài liệu API?",
+      message: "Endpoint này sẽ bị xóa khỏi project. Thao tác này không thể hoàn tác.",
+      confirmText: "Xóa API",
+      cancelText: "Hủy",
+      variant: "danger",
+    });
+
+    if (!approved) {
       return;
     }
 
@@ -119,8 +141,10 @@ const ProjectDetail = () => {
       setSelectedApi(null);
       setMode("view");
       await loadApiDocs();
+      toast.success("Đã xóa API", "Tài liệu API đã được xóa khỏi project.");
     } catch (deleteError) {
       setError(deleteError.message);
+      toast.error("Xóa API thất bại", deleteError.message);
     }
   };
 
@@ -159,28 +183,17 @@ const ProjectDetail = () => {
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div className="relative">
                 <Filter className="pointer-events-none absolute left-3 top-2.5 text-slate-400" size={16} />
-                <select className="input pl-9" value={filters.method} onChange={(event) => changeFilter("method", event.target.value)}>
-                  <option value="">Tất cả method</option>
-                  {METHODS.map((method) => (
-                    <option key={method}>{method}</option>
-                  ))}
-                </select>
+                <SelectField
+                  value={filters.method}
+                  options={methodFilterOptions}
+                  onChange={(value) => changeFilter("method", value)}
+                  buttonClassName="pl-9"
+                  placeholder="All methods"
+                />
               </div>
-              <select className="input" value={filters.status} onChange={(event) => changeFilter("status", event.target.value)}>
-                <option value="">Tất cả trạng thái</option>
-                {STATUSES.map((status) => (
-                  <option key={status.value} value={status.value}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
+              <SelectField value={filters.status} options={statusFilterOptions} onChange={(value) => changeFilter("status", value)} placeholder="All statuses" />
             </div>
-            <select className="input mt-2" value={filters.tag} onChange={(event) => changeFilter("tag", event.target.value)}>
-              <option value="">Tất cả tag</option>
-              {tags.map((tag) => (
-                <option key={tag}>{tag}</option>
-              ))}
-            </select>
+            <SelectField className="mt-2" value={filters.tag} options={tagFilterOptions} onChange={(value) => changeFilter("tag", value)} placeholder="All tags" />
           </div>
 
           <div className="max-h-[calc(100vh-260px)] overflow-auto p-3">

@@ -5,21 +5,23 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: [true, "Vui lòng nhập tên"],
       trim: true,
-      maxlength: 80,
+      minlength: [2, "Tên phải có ít nhất 2 ký tự"],
+      maxlength: [80, "Tên không được vượt quá 80 ký tự"],
     },
     email: {
       type: String,
-      required: true,
+      required: [true, "Vui lòng nhập email"],
       unique: true,
       lowercase: true,
       trim: true,
+      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Email không đúng định dạng"],
     },
     password: {
       type: String,
-      required: true,
-      minlength: 6,
+      required: [true, "Vui lòng nhập mật khẩu"],
+      minlength: [6, "Mật khẩu phải có ít nhất 6 ký tự"],
     },
     role: {
       type: String,

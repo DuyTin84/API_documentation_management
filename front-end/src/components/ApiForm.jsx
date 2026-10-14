@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Save, X } from "lucide-react";
 import FieldEditor from "./FieldEditor";
 import ResponseEditor from "./ResponseEditor";
+import SelectField from "./SelectField";
 import { METHODS, STATUSES } from "../utils/constants";
 
 const initialForm = {
@@ -19,6 +20,17 @@ const initialForm = {
 };
 
 const formatJson = (value) => JSON.stringify(value ?? {}, null, 2);
+
+const validateFields = (items, label) => {
+  items.forEach((item) => {
+    const hasValue = item.key || item.value || item.description;
+    if (hasValue && !item.key?.trim()) {
+      throw new Error(`${label}: vui lòng nhập key cho field đã thêm`);
+    }
+  });
+};
+
+const methodOptions = METHODS.map((method) => ({ value: method, label: method }));
 
 const ApiForm = ({ apiDoc, onSubmit, onCancel, saving }) => {
   const [form, setForm] = useState(initialForm);
@@ -58,8 +70,31 @@ const ApiForm = ({ apiDoc, onSubmit, onCancel, saving }) => {
     setError("");
 
     try {
+      if (!form.name.trim()) {
+        throw new Error("Vui lòng nhập tên API");
+      }
+
+      if (!form.endpoint.trim()) {
+        throw new Error("Vui lòng nhập endpoint");
+      }
+
+      if (!form.endpoint.trim().startsWith("/")) {
+        throw new Error("Endpoint phải bắt đầu bằng dấu /");
+      }
+
+      validateFields(form.headers, "Headers");
+      validateFields(form.pathParams, "Path Params");
+      validateFields(form.queryParams, "Query Params");
+
       JSON.parse(form.requestBody || "{}");
-      form.responses.forEach((response) => JSON.parse(response.body || "{}"));
+      form.responses.forEach((response) => {
+        const statusCode = Number(response.statusCode);
+        if (!Number.isInteger(statusCode) || statusCode < 100 || statusCode > 599) {
+          throw new Error("Status code của response phải nằm trong khoảng 100 đến 599");
+        }
+        JSON.parse(response.body || "{}");
+      });
+
       await onSubmit(form);
     } catch (submitError) {
       setError(submitError.message === "Unexpected end of JSON input" ? "Nội dung JSON không hợp lệ" : submitError.message);
@@ -67,50 +102,55 @@ const ApiForm = ({ apiDoc, onSubmit, onCancel, saving }) => {
   };
 
   return (
-    <form className="space-y-5" onSubmit={handleSubmit}>
+    <form className="space-y-5" onSubmit={handleSubmit} noValidate>
       {error ? <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
       <section className="rounded-md border border-line bg-white p-4">
         <div className="grid gap-4 md:grid-cols-[160px_1fr]">
           <div>
             <label className="label">Method</label>
-            <select className="input" value={form.method} onChange={(event) => update("method", event.target.value)}>
-              {METHODS.map((method) => (
-                <option key={method}>{method}</option>
-              ))}
-            </select>
+            <SelectField value={form.method} options={methodOptions} onChange={(value) => update("method", value)} placeholder="Method" />
           </div>
           <div>
             <label className="label">Endpoint</label>
-            <input className="input" value={form.endpoint} onChange={(event) => update("endpoint", event.target.value)} placeholder="/users/:id" />
+            <input
+              className="input"
+              value={form.endpoint}
+              onChange={(event) => update("endpoint", event.target.value)}
+              placeholder="/users/:id"
+              maxLength={200}
+              required
+            />
           </div>
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div>
             <label className="label">Tên API</label>
-            <input className="input" value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="Lấy chi tiết người dùng" />
+            <input
+              className="input"
+              value={form.name}
+              onChange={(event) => update("name", event.target.value)}
+              placeholder="Lấy chi tiết người dùng"
+              minLength={2}
+              maxLength={160}
+              required
+            />
           </div>
           <div>
             <label className="label">Tag / Module</label>
-            <input className="input" value={form.tag} onChange={(event) => update("tag", event.target.value)} placeholder="Users" />
+            <input className="input" value={form.tag} onChange={(event) => update("tag", event.target.value)} placeholder="Users" maxLength={80} required />
           </div>
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-[1fr_180px]">
           <div>
             <label className="label">Mô tả</label>
-            <textarea className="textarea" value={form.description} onChange={(event) => update("description", event.target.value)} />
+            <textarea className="textarea" value={form.description} onChange={(event) => update("description", event.target.value)} maxLength={1000} />
           </div>
           <div>
             <label className="label">Trạng thái</label>
-            <select className="input" value={form.status} onChange={(event) => update("status", event.target.value)}>
-              {STATUSES.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
+            <SelectField value={form.status} options={STATUSES} onChange={(value) => update("status", value)} placeholder="Status" />
           </div>
         </div>
       </section>
@@ -121,7 +161,7 @@ const ApiForm = ({ apiDoc, onSubmit, onCancel, saving }) => {
 
       <section className="rounded-md border border-line bg-white p-4">
         <label className="label">Request Body JSON</label>
-        <textarea className="textarea min-h-52 font-mono" value={form.requestBody} onChange={(event) => update("requestBody", event.target.value)} />
+        <textarea className="textarea min-h-52 font-mono" value={form.requestBody} onChange={(event) => update("requestBody", event.target.value)} required />
       </section>
 
       <ResponseEditor value={form.responses} onChange={(value) => update("responses", value)} />

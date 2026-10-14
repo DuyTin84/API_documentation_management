@@ -10,17 +10,34 @@ const sanitizeUser = (user) => ({
   createdAt: user.createdAt,
 });
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const register = async ({ name, email, password }) => {
-  if (!name || !email || !password) {
-    fail("Name, email and password are required");
+  const normalizedName = name?.trim();
+  const normalizedEmail = email?.trim().toLowerCase();
+
+  if (!normalizedName || !normalizedEmail || !password) {
+    fail("Vui lòng nhập đầy đủ tên, email và mật khẩu");
   }
 
-  const existedUser = await User.findOne({ email });
+  if (normalizedName.length < 2 || normalizedName.length > 80) {
+    fail("Tên phải có từ 2 đến 80 ký tự");
+  }
+
+  if (!emailRegex.test(normalizedEmail)) {
+    fail("Email không đúng định dạng");
+  }
+
+  if (password.length < 6) {
+    fail("Mật khẩu phải có ít nhất 6 ký tự");
+  }
+
+  const existedUser = await User.findOne({ email: normalizedEmail });
   if (existedUser) {
-    fail("Email is already registered", 409);
+    fail("Email đã được đăng ký", 409);
   }
 
-  const user = await User.create({ name, email, password });
+  const user = await User.create({ name: normalizedName, email: normalizedEmail, password });
 
   return {
     user: sanitizeUser(user),
@@ -29,13 +46,19 @@ const register = async ({ name, email, password }) => {
 };
 
 const login = async ({ email, password }) => {
-  if (!email || !password) {
-    fail("Email and password are required");
+  const normalizedEmail = email?.trim().toLowerCase();
+
+  if (!normalizedEmail || !password) {
+    fail("Vui lòng nhập email và mật khẩu");
   }
 
-  const user = await User.findOne({ email });
+  if (!emailRegex.test(normalizedEmail)) {
+    fail("Email không đúng định dạng");
+  }
+
+  const user = await User.findOne({ email: normalizedEmail });
   if (!user || !(await user.matchPassword(password))) {
-    fail("Invalid email or password", 401);
+    fail("Email hoặc mật khẩu không đúng", 401);
   }
 
   return {

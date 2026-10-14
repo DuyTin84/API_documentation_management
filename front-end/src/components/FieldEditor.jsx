@@ -1,6 +1,9 @@
 import { Plus, Trash2 } from "lucide-react";
+import SelectField from "./SelectField";
+import { FIELD_TYPES } from "../utils/constants";
 
 const emptyField = { key: "", value: "", type: "string", required: false, description: "" };
+const fieldTypeOptions = FIELD_TYPES.map((type) => ({ value: type, label: type }));
 
 const FieldEditor = ({ title, value, onChange, showValue = false }) => {
   const items = value?.length ? value : [];
@@ -50,25 +53,15 @@ const FieldEditor = ({ title, value, onChange, showValue = false }) => {
               items.map((item, index) => (
                 <tr key={index}>
                   <td className="px-3 py-2">
-                    <input className="input" value={item.key} onChange={(event) => updateItem(index, "key", event.target.value)} />
+                    <input className="input" value={item.key} onChange={(event) => updateItem(index, "key", event.target.value)} maxLength={80} required />
                   </td>
                   {showValue ? (
                     <td className="px-3 py-2">
-                      <input
-                        className="input"
-                        value={item.value}
-                        onChange={(event) => updateItem(index, "value", event.target.value)}
-                      />
+                      <input className="input" value={item.value} onChange={(event) => updateItem(index, "value", event.target.value)} maxLength={500} />
                     </td>
                   ) : null}
                   <td className="px-3 py-2">
-                    <select className="input" value={item.type} onChange={(event) => updateItem(index, "type", event.target.value)}>
-                      <option>string</option>
-                      <option>number</option>
-                      <option>boolean</option>
-                      <option>object</option>
-                      <option>array</option>
-                    </select>
+                    <SelectField value={item.type} options={fieldTypeOptions} onChange={(value) => updateItem(index, "type", value)} placeholder="Type" />
                   </td>
                   <td className="px-3 py-2">
                     <input
@@ -79,11 +72,7 @@ const FieldEditor = ({ title, value, onChange, showValue = false }) => {
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <input
-                      className="input"
-                      value={item.description}
-                      onChange={(event) => updateItem(index, "description", event.target.value)}
-                    />
+                    <input className="input" value={item.description} onChange={(event) => updateItem(index, "description", event.target.value)} maxLength={300} />
                   </td>
                   <td className="px-3 py-2 text-right">
                     <button type="button" className="btn btn-muted h-9 w-9 px-0" onClick={() => removeItem(index)} title="Xóa field">

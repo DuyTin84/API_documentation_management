@@ -6,7 +6,7 @@ const protect = async (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      const error = new Error("Unauthorized");
+      const error = new Error("Vui lòng đăng nhập để tiếp tục");
       error.statusCode = 401;
       throw error;
     }
@@ -16,7 +16,7 @@ const protect = async (req, res, next) => {
     const user = await User.findById(decoded.id).select("-password");
 
     if (!user) {
-      const error = new Error("User not found");
+      const error = new Error("Không tìm thấy người dùng");
       error.statusCode = 401;
       throw error;
     }
@@ -25,6 +25,9 @@ const protect = async (req, res, next) => {
     next();
   } catch (error) {
     error.statusCode = error.statusCode || 401;
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      error.message = "Phiên đăng nhập không hợp lệ hoặc đã hết hạn";
+    }
     next(error);
   }
 };

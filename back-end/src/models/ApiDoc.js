@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 
 const fieldSchema = new mongoose.Schema(
   {
-    key: { type: String, required: true, trim: true },
+    key: { type: String, required: [true, "Vui lòng nhập key"], trim: true, maxlength: [80, "Key không được vượt quá 80 ký tự"] },
     value: { type: String, default: "" },
-    type: { type: String, default: "string" },
+    type: { type: String, enum: { values: ["string", "number", "boolean", "object", "array"], message: "Kiểu dữ liệu không hợp lệ" }, default: "string" },
     required: { type: Boolean, default: false },
     description: { type: String, default: "" },
   },
@@ -13,7 +13,7 @@ const fieldSchema = new mongoose.Schema(
 
 const responseSchema = new mongoose.Schema(
   {
-    statusCode: { type: Number, required: true, default: 200 },
+    statusCode: { type: Number, required: [true, "Vui lòng nhập status code"], min: [100, "Status code phải từ 100 trở lên"], max: [599, "Status code không được vượt quá 599"], default: 200 },
     description: { type: String, default: "" },
     body: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
@@ -25,13 +25,14 @@ const apiDocSchema = new mongoose.Schema(
     projectId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
-      required: true,
+      required: [true, "Project là bắt buộc"],
     },
     name: {
       type: String,
-      required: true,
+      required: [true, "Vui lòng nhập tên API"],
       trim: true,
-      maxlength: 160,
+      minlength: [2, "Tên API phải có ít nhất 2 ký tự"],
+      maxlength: [160, "Tên API không được vượt quá 160 ký tự"],
     },
     description: {
       type: String,
@@ -39,13 +40,14 @@ const apiDocSchema = new mongoose.Schema(
     },
     method: {
       type: String,
-      enum: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-      required: true,
+      enum: { values: ["GET", "POST", "PUT", "PATCH", "DELETE"], message: "Method không hợp lệ" },
+      required: [true, "Vui lòng chọn method"],
     },
     endpoint: {
       type: String,
-      required: true,
+      required: [true, "Vui lòng nhập endpoint"],
       trim: true,
+      maxlength: [200, "Endpoint không được vượt quá 200 ký tự"],
     },
     tag: {
       type: String,
@@ -54,7 +56,7 @@ const apiDocSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["draft", "published", "deprecated"],
+      enum: { values: ["draft", "published", "deprecated"], message: "Trạng thái API không hợp lệ" },
       default: "draft",
     },
     headers: [fieldSchema],
@@ -66,12 +68,12 @@ const apiDocSchema = new mongoose.Schema(
     },
     responses: {
       type: [responseSchema],
-      default: [{ statusCode: 200, description: "Successful response", body: {} }],
+      default: [{ statusCode: 200, description: "Phản hồi thành công", body: {} }],
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: [true, "Người tạo là bắt buộc"],
     },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,

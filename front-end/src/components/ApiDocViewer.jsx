@@ -1,5 +1,6 @@
 import MethodBadge from "./MethodBadge";
 import JsonBlock from "./JsonBlock";
+import { getStatusLabel } from "../utils/constants";
 
 const FieldTable = ({ title, rows, showValue = false }) => (
   <section>
@@ -50,7 +51,7 @@ const ApiDocViewer = ({ apiDoc }) => {
         <div className="flex flex-wrap items-center gap-3">
           <MethodBadge method={apiDoc.method} />
           <code className="break-all rounded bg-slate-100 px-3 py-1 text-sm font-semibold text-ink">{apiDoc.endpoint}</code>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold capitalize text-slate-700">{apiDoc.status}</span>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{getStatusLabel(apiDoc.status)}</span>
         </div>
         <h2 className="mt-4 text-2xl font-bold text-ink">{apiDoc.name}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">{apiDoc.description || "Chưa có mô tả."}</p>
