@@ -27,7 +27,7 @@ const AppLayout = ({ children }) => {
   return (
     <div className="min-h-screen bg-panel">
       <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-14 max-w-[1500px] items-center justify-between px-4 lg:px-6">
           <Link to="/" className="flex items-center gap-3 text-ink">
             <span className="grid h-9 w-9 place-items-center rounded-md bg-accent text-white">
               <BookOpen size={19} />
@@ -51,7 +51,7 @@ const AppLayout = ({ children }) => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto max-w-[1500px] px-4 py-4 lg:px-6">{children}</main>
     </div>
   );
 };

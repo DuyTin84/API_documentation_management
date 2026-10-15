@@ -180,15 +180,15 @@ const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => 
   };
 
   return (
-    <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+    <form className="space-y-4" onSubmit={handleSubmit} noValidate>
       {error ? (
         <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
 
-      <section className="rounded-md border border-line bg-white p-4">
-        <div className="grid gap-4 lg:grid-cols-12">
+      <section className="rounded-md border border-line bg-white p-3">
+        <div className="grid gap-3 lg:grid-cols-12">
           <div className="lg:col-span-2">
             <label className="label">Method</label>
             <SelectField
@@ -239,7 +239,7 @@ const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => 
           <div className="lg:col-span-12">
             <label className="label">Mô tả</label>
             <textarea
-              className="textarea min-h-24"
+              className="textarea min-h-20"
               value={form.description}
               onChange={(event) => update("description", event.target.value)}
               maxLength={1000}
@@ -265,10 +265,10 @@ const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => 
         onChange={(value) => update("queryParams", value)}
       />
 
-      <section className="rounded-md border border-line bg-white p-4">
+      <section className="rounded-md border border-line bg-white p-3">
         <label className="label">Request Body JSON</label>
         <textarea
-          className="textarea min-h-52 font-mono"
+          className="textarea min-h-40 font-mono"
           value={form.requestBody}
           onChange={(event) => update("requestBody", event.target.value)}
           required
@@ -280,7 +280,7 @@ const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => 
         onChange={(value) => update("responses", value)}
       />
 
-      <div className="sticky bottom-0 flex justify-end gap-3 border-t border-line bg-panel py-4">
+      <div className="sticky bottom-0 z-10 flex justify-end gap-3 border-t border-line bg-panel/95 py-3 backdrop-blur">
         <button type="button" className="btn btn-muted" onClick={onCancel}>
           <X size={17} />
           Hủy

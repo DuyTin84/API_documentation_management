@@ -27,7 +27,10 @@ const Dashboard = () => {
   const filteredProjects = useMemo(() => {
     return projects.filter((project) => {
       const keyword = search.toLowerCase();
-      return project.name.toLowerCase().includes(keyword) || project.description.toLowerCase().includes(keyword);
+      return (
+        project.name.toLowerCase().includes(keyword) ||
+        project.description.toLowerCase().includes(keyword)
+      );
     });
   }, [projects, search]);
 
@@ -108,14 +111,23 @@ const Dashboard = () => {
         toast.success("Đã cập nhật project", "Thông tin project đã được lưu.");
       } else {
         await projectService.createProject(form);
-        toast.success("Đã tạo project", "Bạn có thể bắt đầu thêm tài liệu API.");
+        toast.success(
+          "Đã tạo project",
+          "Bạn có thể bắt đầu thêm tài liệu API.",
+        );
       }
       closeProjectForm();
       await loadProjects();
     } catch (submitError) {
-      const message = submitError instanceof TypeError ? "Base URL không đúng định dạng" : submitError.message;
+      const message =
+        submitError instanceof TypeError
+          ? "Base URL không đúng định dạng"
+          : submitError.message;
       setError(message);
-      toast.error(editingProject ? "Cập nhật project thất bại" : "Tạo project thất bại", message);
+      toast.error(
+        editingProject ? "Cập nhật project thất bại" : "Tạo project thất bại",
+        message,
+      );
     } finally {
       setSaving(false);
     }
@@ -124,7 +136,8 @@ const Dashboard = () => {
   const removeProject = async (projectId) => {
     const approved = await confirm({
       title: "Xóa project?",
-      message: "Project và toàn bộ tài liệu API bên trong sẽ bị xóa. Thao tác này không thể hoàn tác.",
+      message:
+        "Project và toàn bộ tài liệu API bên trong sẽ bị xóa. Thao tác này không thể hoàn tác.",
       confirmText: "Xóa project",
       cancelText: "Hủy",
       variant: "danger",
@@ -149,33 +162,56 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      <div className="mb-6 rounded-md border border-line bg-white p-5 shadow-soft">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+      <div className="mb-4 border-b border-line pb-4">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-accent">Không gian làm việc</p>
-            <h1 className="mt-1 text-3xl font-black text-ink">Dự án</h1>
-            <p className="mt-2 max-w-xl text-sm text-slate-500">Tạo và quản lý các bộ tài liệu API theo từng dự án.</p>
+            {/* <p className="text-xs font-bold uppercase tracking-wide text-accent">Quản lý tài liệu API</p> */}
+            <h1 className="mt-0.5 text-2xl font-black text-ink">
+              Danh sách project
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Quản lý các bộ tài liệu và endpoint theo từng project.
+            </p>
           </div>
-          <button className="btn btn-primary shrink-0" onClick={openCreateProject}>
+          <button
+            className="btn btn-primary shrink-0"
+            onClick={openCreateProject}
+          >
             <Plus size={17} />
             Tạo project
           </button>
         </div>
 
-        <div className="mt-5 flex flex-col gap-3 border-t border-line pt-4 md:flex-row md:items-center md:justify-between">
-          <div className="relative w-full md:max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-2.5 text-slate-400" size={18} />
-            <input className="input pl-10" placeholder="Tìm project..." value={search} onChange={(event) => setSearch(event.target.value)} />
+        <div className="mt-3 flex items-center gap-3">
+          <div className="relative min-w-0 flex-1 sm:max-w-lg">
+            <Search
+              className="pointer-events-none absolute left-3 top-2.5 text-slate-400"
+              size={18}
+            />
+            <input
+              className="input pl-10"
+              placeholder="Tìm project..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
           </div>
-          <p className="text-sm font-semibold text-slate-500">{filteredProjects.length} project</p>
+          <p className="shrink-0 text-sm font-semibold text-slate-500">
+            {filteredProjects.length} project
+          </p>
         </div>
       </div>
 
-      {error && !isFormOpen ? <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
+      {error && !isFormOpen ? (
+        <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {error}
+        </div>
+      ) : null}
 
       <section>
         {loading ? (
-          <div className="rounded-md border border-line bg-white p-8 text-center text-sm text-slate-500">Đang tải danh sách project...</div>
+          <div className="rounded-md border border-line bg-white p-8 text-center text-sm text-slate-500">
+            Đang tải danh sách project...
+          </div>
         ) : filteredProjects.length === 0 ? (
           <EmptyState
             title="Chưa có project"
@@ -188,16 +224,19 @@ const Dashboard = () => {
             }
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filteredProjects.map((project) => (
               <article
                 key={project._id}
-                className="cursor-pointer rounded-md border border-line bg-white p-5 shadow-soft transition hover:border-accent hover:shadow-lg"
+                className="cursor-pointer rounded-md border border-line bg-white p-4 shadow-soft transition hover:border-accent hover:shadow-lg"
                 onClick={() => navigate(`/projects/${project._id}`)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(event) => {
-                  if (event.target === event.currentTarget && event.key === "Enter") {
+                  if (
+                    event.target === event.currentTarget &&
+                    event.key === "Enter"
+                  ) {
                     navigate(`/projects/${project._id}`);
                   }
                 }}
@@ -211,7 +250,9 @@ const Dashboard = () => {
                     >
                       {project.name}
                     </Link>
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">{project.description || "Chưa có mô tả."}</p>
+                    <p className="mt-1.5 line-clamp-2 text-sm leading-5 text-slate-500">
+                      {project.description || "Chưa có mô tả."}
+                    </p>
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <button
@@ -236,9 +277,15 @@ const Dashboard = () => {
                     </button>
                   </div>
                 </div>
-                <div className="mt-5 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
-                  <span className="rounded bg-panel px-2 py-1">{project.totalApis || 0} API</span>
-                  {project.baseUrl ? <span className="max-w-full truncate rounded bg-panel px-2 py-1">{project.baseUrl}</span> : null}
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
+                  <span className="rounded bg-panel px-2 py-1">
+                    {project.totalApis || 0} API
+                  </span>
+                  {project.baseUrl ? (
+                    <span className="max-w-full truncate rounded bg-panel px-2 py-1">
+                      {project.baseUrl}
+                    </span>
+                  ) : null}
                   <span className="ml-auto inline-flex items-center gap-1 rounded bg-teal-50 px-2 py-1 text-accent">
                     Mở project
                     <ArrowRight size={14} />
@@ -252,28 +299,48 @@ const Dashboard = () => {
 
       {isFormOpen ? (
         <div className="modal-backdrop" onMouseDown={closeProjectForm}>
-          <form className="modal-panel" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()} noValidate>
+          <form
+            className="modal-panel"
+            onSubmit={submit}
+            onMouseDown={(event) => event.stopPropagation()}
+            noValidate
+          >
             <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
               <div>
-                <h2 className="text-xl font-black text-ink">{editingProject ? "Chỉnh sửa project" : "Tạo project"}</h2>
+                <h2 className="text-xl font-black text-ink">
+                  {editingProject ? "Chỉnh sửa project" : "Tạo project"}
+                </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  {editingProject ? "Cập nhật tên, base URL và mô tả của project." : "Khai báo thông tin cơ bản trước khi thêm API."}
+                  {editingProject
+                    ? "Cập nhật tên, base URL và mô tả của project."
+                    : "Khai báo thông tin cơ bản trước khi thêm API."}
                 </p>
               </div>
-              <button type="button" className="btn btn-muted h-9 w-9 shrink-0 px-0" onClick={closeProjectForm} title="Đóng">
+              <button
+                type="button"
+                className="btn btn-muted h-9 w-9 shrink-0 px-0"
+                onClick={closeProjectForm}
+                title="Đóng"
+              >
                 <X size={17} />
               </button>
             </div>
 
             <div className="space-y-4 p-5">
-              {error ? <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
+              {error ? (
+                <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {error}
+                </div>
+              ) : null}
 
               <div>
                 <label className="label">Tên project</label>
                 <input
                   className="input"
                   value={form.name}
-                  onChange={(event) => setForm({ ...form, name: event.target.value })}
+                  onChange={(event) =>
+                    setForm({ ...form, name: event.target.value })
+                  }
                   minLength={2}
                   maxLength={120}
                   required
@@ -286,23 +353,42 @@ const Dashboard = () => {
                   className="input"
                   type="url"
                   value={form.baseUrl}
-                  onChange={(event) => setForm({ ...form, baseUrl: event.target.value })}
+                  onChange={(event) =>
+                    setForm({ ...form, baseUrl: event.target.value })
+                  }
                   placeholder="https://api.example.com/v1"
                 />
               </div>
               <div>
                 <label className="label">Mô tả</label>
-                <textarea className="textarea" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} maxLength={500} />
+                <textarea
+                  className="textarea"
+                  value={form.description}
+                  onChange={(event) =>
+                    setForm({ ...form, description: event.target.value })
+                  }
+                  maxLength={500}
+                />
               </div>
             </div>
 
             <div className="flex justify-end gap-3 border-t border-line bg-panel px-5 py-4">
-              <button type="button" className="btn btn-muted" onClick={closeProjectForm}>
+              <button
+                type="button"
+                className="btn btn-muted"
+                onClick={closeProjectForm}
+              >
                 Hủy
               </button>
               <button className="btn btn-primary" disabled={saving}>
                 {editingProject ? <Edit3 size={17} /> : <Plus size={17} />}
-                {saving ? (editingProject ? "Đang lưu..." : "Đang tạo...") : editingProject ? "Lưu thay đổi" : "Tạo project"}
+                {saving
+                  ? editingProject
+                    ? "Đang lưu..."
+                    : "Đang tạo..."
+                  : editingProject
+                    ? "Lưu thay đổi"
+                    : "Tạo project"}
               </button>
             </div>
           </form>

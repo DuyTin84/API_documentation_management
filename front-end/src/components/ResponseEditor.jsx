@@ -31,12 +31,12 @@ const ResponseEditor = ({ value, onChange }) => {
         </button>
       </div>
 
-      <div className="space-y-4 p-4">
+      <div className="space-y-3 p-3">
         {items.length === 0 ? (
           <p className="text-sm text-slate-500">Chưa có response.</p>
         ) : (
           items.map((item, index) => (
-            <div key={index} className="rounded-md border border-line bg-panel p-4">
+            <div key={index} className="rounded-md border border-line bg-panel p-3">
               <div className="grid gap-3 md:grid-cols-[140px_1fr_40px]">
                 <div>
                   <label className="label">Status code</label>
@@ -62,7 +62,7 @@ const ResponseEditor = ({ value, onChange }) => {
               </div>
               <div className="mt-3">
                 <label className="label">Body JSON</label>
-                <textarea className="textarea font-mono" value={item.body} onChange={(event) => updateItem(index, "body", event.target.value)} required />
+                <textarea className="textarea min-h-24 font-mono" value={item.body} onChange={(event) => updateItem(index, "body", event.target.value)} required />
               </div>
             </div>
           ))

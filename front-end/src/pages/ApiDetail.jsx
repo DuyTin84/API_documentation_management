@@ -80,16 +80,22 @@ const ApiDetail = () => {
     }
   };
 
+  const pageTitle = isCreating
+    ? "Tạo tài liệu API"
+    : mode === "edit"
+      ? "Chỉnh sửa tài liệu API"
+      : apiDoc?.name || "Chi tiết API";
+
   return (
     <AppLayout>
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-2 border-b border-line pb-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <button className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-accent" onClick={() => navigate(`/projects/${projectId}`)}>
+          <button className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-accent" onClick={() => navigate(`/projects/${projectId}`)}>
             <ArrowLeft size={16} />
             Quay lại danh sách endpoint
           </button>
-          <h1 className="text-2xl font-black text-ink">{isCreating ? "Tạo tài liệu API" : apiDoc?.name || "Chi tiết API"}</h1>
-          <p className="mt-1 text-sm text-slate-500">{project?.name || "Project"}</p>
+          <h1 className="text-2xl font-black text-ink">{pageTitle}</h1>
+          <p className="mt-0.5 text-sm text-slate-500">{project?.name || "Project"}</p>
         </div>
 
         {!isCreating && mode === "view" && apiDoc ? (
@@ -115,16 +121,13 @@ const ApiDetail = () => {
           }
         />
       ) : mode === "edit" || mode === "create" ? (
-        <div>
-          <h2 className="mb-4 text-xl font-black text-ink">{isCreating ? "Khai báo API mới" : "Chỉnh sửa tài liệu API"}</h2>
-          <ApiForm
-            apiDoc={apiDoc}
-            availableTags={availableTags}
-            onSubmit={submitApi}
-            onCancel={() => (isCreating ? navigate(`/projects/${projectId}`) : setMode("view"))}
-            saving={saving}
-          />
-        </div>
+        <ApiForm
+          apiDoc={apiDoc}
+          availableTags={availableTags}
+          onSubmit={submitApi}
+          onCancel={() => (isCreating ? navigate(`/projects/${projectId}`) : setMode("view"))}
+          saving={saving}
+        />
       ) : (
         <ApiDocViewer apiDoc={apiDoc} />
       )}
