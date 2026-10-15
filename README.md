@@ -64,6 +64,7 @@ VITE_API_URL=http://localhost:5000/api
 - Quản lý endpoint theo project
 - Khai báo method, URL, header, path params, query params, request body, response
 - Tìm kiếm và lọc endpoint
+- Xuất toàn bộ project thành tài liệu OpenAPI JSON
 - Giao diện xem tài liệu API rõ ràng, dễ tra cứu
 
 ## API chính
@@ -78,6 +79,7 @@ POST   /api/projects
 GET    /api/projects/:id
 PUT    /api/projects/:id
 DELETE /api/projects/:id
+GET    /api/projects/:id/export/openapi
 
 GET    /api/projects/:projectId/apis
 POST   /api/projects/:projectId/apis

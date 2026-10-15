@@ -46,10 +46,23 @@ const deleteProject = async (req, res, next) => {
   }
 };
 
+const exportProjectOpenApi = async (req, res, next) => {
+  try {
+    const document = await projectService.exportProjectOpenApi(req.params.id, req.user._id);
+
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="openapi.json"');
+    res.status(200).send(`${JSON.stringify(document, null, 2)}\n`);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   listProjects,
   createProject,
   getProject,
   updateProject,
   deleteProject,
+  exportProjectOpenApi,
 };

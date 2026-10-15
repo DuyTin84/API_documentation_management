@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Project = require("../models/Project");
 const ApiDoc = require("../models/ApiDoc");
+const buildOpenApiDocument = require("../templates/openapi.template");
 const { fail } = require("../utils/response");
 
 const listProjects = async (userId) => {
@@ -109,10 +110,18 @@ const deleteProject = async (projectId, userId) => {
   return project;
 };
 
+const exportProjectOpenApi = async (projectId, userId) => {
+  const project = await getProject(projectId, userId);
+  const apiDocs = await ApiDoc.find({ projectId: project._id }).sort({ tag: 1, endpoint: 1, method: 1 });
+
+  return buildOpenApiDocument(project, apiDocs);
+};
+
 module.exports = {
   listProjects,
   createProject,
   getProject,
   updateProject,
   deleteProject,
+  exportProjectOpenApi,
 };

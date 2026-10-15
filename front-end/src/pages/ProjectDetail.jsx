@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, FilePlus2, Filter, RotateCcw, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, FilePlus2, Filter, RotateCcw, Search, Trash2 } from "lucide-react";
 import AppLayout from "../layouts/AppLayout";
 import EmptyState from "../components/EmptyState";
 import MethodBadge from "../components/MethodBadge";
@@ -14,6 +14,19 @@ const methodFilterOptions = [{ value: "", label: "All methods" }, ...METHODS.map
 const statusFilterOptions = [{ value: "", label: "All statuses" }, ...STATUSES];
 const emptyFilters = { search: "", method: "", status: "", tag: "" };
 
+const buildExportFileName = (projectName = "api-documentation") => {
+  const normalizedName = projectName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `${normalizedName || "api-documentation"}.openapi.json`;
+};
+
 const ProjectDetail = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -23,6 +36,7 @@ const ProjectDetail = () => {
   const [availableTags, setAvailableTags] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState("");
   const apiRequestIdRef = useRef(0);
 
@@ -104,6 +118,36 @@ const ProjectDetail = () => {
 
   const resetFilters = () => {
     setFilters({ ...emptyFilters });
+  };
+
+  const exportOpenApi = async () => {
+    if (!project || exporting) return;
+
+    setExporting(true);
+    setError("");
+
+    try {
+      const openApiDocument = await projectService.exportProjectOpenApi(projectId);
+      const fileContent = `${JSON.stringify(openApiDocument, null, 2)}\n`;
+      const fileUrl = URL.createObjectURL(
+        new Blob([fileContent], { type: "application/json;charset=utf-8" })
+      );
+      const downloadLink = document.createElement("a");
+
+      downloadLink.href = fileUrl;
+      downloadLink.download = buildExportFileName(project.name);
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      window.setTimeout(() => URL.revokeObjectURL(fileUrl), 0);
+
+      toast.success("Xuất OpenAPI thành công", "File JSON chứa toàn bộ API của project đã được tải xuống.");
+    } catch (exportError) {
+      setError(exportError.message);
+      toast.error("Xuất OpenAPI thất bại", exportError.message);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const deleteApi = async (event, apiDoc) => {
@@ -197,10 +241,21 @@ const ProjectDetail = () => {
                 <h2 className="text-lg font-black text-ink">Danh sách endpoint</h2>
                 <p className="mt-0.5 text-xs text-slate-500">{apiDocs.length} API phù hợp bộ lọc hiện tại.</p>
               </div>
-              <button className="btn btn-primary h-9 px-3" onClick={() => navigate(`/projects/${projectId}/apis/new`)}>
-                <FilePlus2 size={17} />
-                Tạo API
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="btn btn-muted h-9 px-3 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={exportOpenApi}
+                  disabled={!project || exporting}
+                >
+                  <Download size={16} />
+                  {exporting ? "Đang xuất..." : "Xuất OpenAPI"}
+                </button>
+                <button className="btn btn-primary h-9 px-3" onClick={() => navigate(`/projects/${projectId}/apis/new`)}>
+                  <FilePlus2 size={17} />
+                  Tạo API
+                </button>
+              </div>
             </div>
 
             <div className="p-3">

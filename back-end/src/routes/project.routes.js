@@ -7,6 +7,7 @@ const router = express.Router();
 router.use(protect);
 
 router.route("/").get(projectController.listProjects).post(projectController.createProject);
+router.get("/:id/export/openapi", projectController.exportProjectOpenApi);
 router
   .route("/:id")
   .get(projectController.getProject)
