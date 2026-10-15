@@ -12,12 +12,12 @@ const sanitizeUser = (user) => ({
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const register = async ({ name, email, password }) => {
+const register = async ({ name, email, password, confirmPassword }) => {
   const normalizedName = name?.trim();
   const normalizedEmail = email?.trim().toLowerCase();
 
-  if (!normalizedName || !normalizedEmail || !password) {
-    fail("Vui lòng nhập đầy đủ tên, email và mật khẩu");
+  if (!normalizedName || !normalizedEmail || !password || !confirmPassword) {
+    fail("Vui lòng nhập đầy đủ thông tin đăng ký");
   }
 
   if (normalizedName.length < 2 || normalizedName.length > 80) {
@@ -30,6 +30,14 @@ const register = async ({ name, email, password }) => {
 
   if (password.length < 6) {
     fail("Mật khẩu phải có ít nhất 6 ký tự");
+  }
+
+  if (password.length > 72) {
+    fail("Mật khẩu không được vượt quá 72 ký tự");
+  }
+
+  if (password !== confirmPassword) {
+    fail("Mật khẩu nhập lại không khớp");
   }
 
   const existedUser = await User.findOne({ email: normalizedEmail });
@@ -54,6 +62,10 @@ const login = async ({ email, password }) => {
 
   if (!emailRegex.test(normalizedEmail)) {
     fail("Email không đúng định dạng");
+  }
+
+  if (password.length < 6 || password.length > 72) {
+    fail("Mật khẩu phải có từ 6 đến 72 ký tự");
   }
 
   const user = await User.findOne({ email: normalizedEmail });

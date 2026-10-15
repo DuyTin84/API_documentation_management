@@ -1,5 +1,5 @@
 import { CheckCircle2, Info, TriangleAlert, X, XCircle } from "lucide-react";
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 const FeedbackContext = createContext(null);
 
@@ -50,6 +50,19 @@ export const FeedbackProvider = ({ children }) => {
     }),
     [pushToast]
   );
+
+  useEffect(() => {
+    const handleUnauthorized = (event) => {
+      pushToast({
+        type: "warning",
+        title: "Phiên đăng nhập đã kết thúc",
+        message: event.detail?.message || "Vui lòng đăng nhập lại để tiếp tục.",
+      });
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
+  }, [pushToast]);
 
   const confirm = useCallback((options) => {
     return new Promise((resolve) => {

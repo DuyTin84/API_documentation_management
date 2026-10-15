@@ -8,10 +8,18 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const handleUnauthorized = () => {
+      localStorage.removeItem("token");
+      setUser(null);
+      setLoading(false);
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+
     const token = localStorage.getItem("token");
     if (!token) {
       setLoading(false);
-      return;
+      return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
     }
 
     authService
@@ -19,6 +27,8 @@ export const AuthProvider = ({ children }) => {
       .then((response) => setUser(response.data))
       .catch(() => localStorage.removeItem("token"))
       .finally(() => setLoading(false));
+
+    return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
   }, []);
 
   const signIn = async (payload) => {
@@ -36,6 +46,7 @@ export const AuthProvider = ({ children }) => {
   const signOut = () => {
     localStorage.removeItem("token");
     setUser(null);
+    setLoading(false);
   };
 
   const value = useMemo(

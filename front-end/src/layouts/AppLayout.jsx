@@ -1,13 +1,26 @@
 import { Link, useNavigate } from "react-router-dom";
 import { BookOpen, LogOut } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useFeedback } from "../hooks/useFeedback";
 
 const AppLayout = ({ children }) => {
   const { user, signOut } = useAuth();
+  const { confirm, toast } = useFeedback();
   const navigate = useNavigate();
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    const approved = await confirm({
+      title: "Đăng xuất khỏi tài khoản?",
+      message: "Bạn sẽ cần đăng nhập lại để tiếp tục quản lý tài liệu API.",
+      confirmText: "Đăng xuất",
+      cancelText: "Ở lại",
+      variant: "primary",
+    });
+
+    if (!approved) return;
+
     signOut();
+    toast.success("Đăng xuất thành công", "Phiên làm việc của bạn đã kết thúc.");
     navigate("/login");
   };
 
@@ -30,7 +43,7 @@ const AppLayout = ({ children }) => {
               <p className="text-sm font-semibold text-ink">{user?.name}</p>
               <p className="text-xs text-slate-500">{user?.email}</p>
             </div>
-            <button className="btn btn-muted h-9 px-3" onClick={handleSignOut} title="Đăng xuất">
+            <button type="button" className="btn btn-muted h-9 px-3" onClick={handleSignOut} title="Đăng xuất">
               <LogOut size={16} />
               <span className="hidden sm:inline">Đăng xuất</span>
             </button>

@@ -15,7 +15,15 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    const message = error.response?.data?.message || "Something went wrong";
+    const message = error.response?.data?.message || "Đã xảy ra lỗi. Vui lòng thử lại.";
+    const requestUrl = error.config?.url || "";
+    const isAuthRequest = requestUrl.includes("/auth/login") || requestUrl.includes("/auth/register");
+
+    if (error.response?.status === 401 && localStorage.getItem("token") && !isAuthRequest) {
+      localStorage.removeItem("token");
+      window.dispatchEvent(new CustomEvent("auth:unauthorized", { detail: { message } }));
+    }
+
     return Promise.reject(new Error(message));
   }
 );
