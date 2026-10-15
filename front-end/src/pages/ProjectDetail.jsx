@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, FilePlus2, Filter, Search, Trash2 } from "lucide-react";
 import AppLayout from "../layouts/AppLayout";
@@ -19,15 +19,16 @@ const ProjectDetail = () => {
   const { toast, confirm } = useFeedback();
   const [project, setProject] = useState(null);
   const [apiDocs, setApiDocs] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
   const [filters, setFilters] = useState({ search: "", method: "", status: "", tag: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const apiRequestIdRef = useRef(0);
 
-  const tags = useMemo(() => {
-    return [...new Set(apiDocs.map((apiDoc) => apiDoc.tag).filter(Boolean))].sort();
-  }, [apiDocs]);
-
-  const tagFilterOptions = useMemo(() => [{ value: "", label: "All tags" }, ...tags.map((tag) => ({ value: tag, label: tag }))], [tags]);
+  const tagFilterOptions = useMemo(
+    () => [{ value: "", label: "All tags" }, ...availableTags.map((tag) => ({ value: tag, label: tag }))],
+    [availableTags]
+  );
 
   const groupedApis = useMemo(() => {
     return apiDocs.reduce((groups, apiDoc) => {
@@ -38,42 +39,64 @@ const ProjectDetail = () => {
     }, {});
   }, [apiDocs]);
 
-  const loadProject = async () => {
-    const response = await projectService.getProject(projectId);
-    setProject(response.data);
-  };
-
-  const loadApiDocs = async (nextFilters = filters) => {
-    const params = Object.fromEntries(Object.entries(nextFilters).filter(([, value]) => value));
-    const response = await apiDocService.getApiDocs(projectId, params);
-    setApiDocs(response.data);
-  };
-
-  const loadAll = async () => {
-    setLoading(true);
+  useEffect(() => {
+    let active = true;
+    setProject(null);
+    setApiDocs([]);
+    setAvailableTags([]);
+    setFilters({ search: "", method: "", status: "", tag: "" });
     setError("");
 
-    try {
-      await Promise.all([loadProject(), loadApiDocs()]);
-    } catch (loadError) {
-      setError(loadError.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    projectService
+      .getProject(projectId)
+      .then((response) => {
+        if (active) setProject(response.data);
+      })
+      .catch((loadError) => {
+        if (active) setError(loadError.message);
+      });
 
-  useEffect(() => {
-    loadAll();
+    return () => {
+      active = false;
+    };
   }, [projectId]);
 
-  const changeFilter = async (key, value) => {
-    const nextFilters = { ...filters, [key]: value };
-    setFilters(nextFilters);
-    try {
-      await loadApiDocs(nextFilters);
-    } catch (filterError) {
-      setError(filterError.message);
-    }
+  useEffect(() => {
+    const requestId = ++apiRequestIdRef.current;
+    const timerId = window.setTimeout(async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const params = Object.fromEntries(Object.entries(filters).filter(([, value]) => value));
+        const response = await apiDocService.getApiDocs(projectId, params);
+
+        if (requestId !== apiRequestIdRef.current) return;
+
+        setApiDocs(response.data);
+        const responseTags = response.data.map((apiDoc) => apiDoc.tag).filter(Boolean);
+        setAvailableTags((current) => [...new Set([...current, ...responseTags])].sort());
+      } catch (loadError) {
+        if (requestId === apiRequestIdRef.current) {
+          setError(loadError.message);
+        }
+      } finally {
+        if (requestId === apiRequestIdRef.current) {
+          setLoading(false);
+        }
+      }
+    }, filters.search ? 300 : 0);
+
+    return () => {
+      window.clearTimeout(timerId);
+      if (requestId === apiRequestIdRef.current) {
+        apiRequestIdRef.current += 1;
+      }
+    };
+  }, [projectId, filters]);
+
+  const changeFilter = (key, value) => {
+    setFilters((current) => ({ ...current, [key]: value }));
   };
 
   const deleteApi = async (event, apiDoc) => {
@@ -92,8 +115,12 @@ const ProjectDetail = () => {
     }
 
     try {
-      await apiDocService.deleteApiDoc(apiDoc._id);
-      await loadApiDocs();
+      await apiDocService.deleteApiDoc(projectId, apiDoc._id);
+      const remainingApiDocs = apiDocs.filter((item) => item._id !== apiDoc._id);
+      setApiDocs(remainingApiDocs);
+      if (!filters.search && !filters.method && !filters.status && !filters.tag) {
+        setAvailableTags([...new Set(remainingApiDocs.map((item) => item.tag).filter(Boolean))].sort());
+      }
       toast.success("Đã xóa API", "Tài liệu API đã được xóa khỏi project.");
     } catch (deleteError) {
       setError(deleteError.message);
@@ -125,7 +152,13 @@ const ProjectDetail = () => {
             <p className="mb-3 text-sm font-bold text-ink">Bộ lọc endpoint</p>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-2.5 text-slate-400" size={18} />
-              <input className="input pl-10" placeholder="Tìm endpoint..." value={filters.search} onChange={(event) => changeFilter("search", event.target.value)} />
+              <input
+                className="input pl-10"
+                placeholder="Tìm endpoint..."
+                value={filters.search}
+                onChange={(event) => changeFilter("search", event.target.value)}
+                maxLength={100}
+              />
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div className="relative">

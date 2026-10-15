@@ -29,7 +29,7 @@ const ApiDetail = () => {
     try {
       const [projectResponse, apiResponse] = await Promise.all([
         projectService.getProject(projectId),
-        isCreating ? Promise.resolve({ data: null }) : apiDocService.getApiDoc(apiId),
+        isCreating ? Promise.resolve({ data: null }) : apiDocService.getApiDoc(projectId, apiId),
       ]);
       const apiDocsResponse = await apiDocService.getApiDocs(projectId);
       setProject(projectResponse.data);
@@ -61,7 +61,9 @@ const ApiDetail = () => {
         })),
       };
 
-      const response = isCreating ? await apiDocService.createApiDoc(projectId, payload) : await apiDocService.updateApiDoc(apiId, payload);
+      const response = isCreating
+        ? await apiDocService.createApiDoc(projectId, payload)
+        : await apiDocService.updateApiDoc(projectId, apiId, payload);
       setApiDoc(response.data);
       toast.success(isCreating ? "Đã tạo API" : "Đã cập nhật API", "Tài liệu API đã được lưu.");
       if (isCreating) {

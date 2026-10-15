@@ -12,7 +12,7 @@ const listApiDocs = async (req, res, next) => {
 
 const getApiDoc = async (req, res, next) => {
   try {
-    const apiDoc = await apiService.getApiDoc(req.params.id, req.user._id);
+    const apiDoc = await apiService.getApiDoc(req.params.projectId, req.params.id, req.user._id);
     success(res, apiDoc);
   } catch (error) {
     next(error);
@@ -22,7 +22,7 @@ const getApiDoc = async (req, res, next) => {
 const createApiDoc = async (req, res, next) => {
   try {
     const apiDoc = await apiService.createApiDoc(req.params.projectId, req.body, req.user._id);
-    success(res, apiDoc, "API documentation created", 201);
+    success(res, apiDoc, "Tạo tài liệu API thành công", 201);
   } catch (error) {
     next(error);
   }
@@ -30,8 +30,8 @@ const createApiDoc = async (req, res, next) => {
 
 const updateApiDoc = async (req, res, next) => {
   try {
-    const apiDoc = await apiService.updateApiDoc(req.params.id, req.body, req.user._id);
-    success(res, apiDoc, "API documentation updated");
+    const apiDoc = await apiService.updateApiDoc(req.params.projectId, req.params.id, req.body, req.user._id);
+    success(res, apiDoc, "Cập nhật tài liệu API thành công");
   } catch (error) {
     next(error);
   }
@@ -39,8 +39,8 @@ const updateApiDoc = async (req, res, next) => {
 
 const deleteApiDoc = async (req, res, next) => {
   try {
-    await apiService.deleteApiDoc(req.params.id, req.user._id);
-    success(res, null, "API documentation deleted");
+    await apiService.deleteApiDoc(req.params.projectId, req.params.id, req.user._id);
+    success(res, null, "Xóa tài liệu API thành công");
   } catch (error) {
     next(error);
   }

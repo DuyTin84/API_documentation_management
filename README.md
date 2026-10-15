@@ -50,6 +50,19 @@ Frontend mặc định gọi API tại:
 VITE_API_URL=http://localhost:5000/api
 ```
 
+## Kiểm tra dự án
+
+Chạy kiểm thử riêng cho từng phần:
+
+```bash
+cd back-end
+npm test
+
+cd ../front-end
+npm test
+npm run build
+```
+
 ## Tính năng MVP
 
 - Đăng ký, đăng nhập bằng JWT
@@ -74,7 +87,7 @@ DELETE /api/projects/:id
 
 GET    /api/projects/:projectId/apis
 POST   /api/projects/:projectId/apis
-GET    /api/apis/:id
-PUT    /api/apis/:id
-DELETE /api/apis/:id
+GET    /api/projects/:projectId/apis/:id
+PUT    /api/projects/:projectId/apis/:id
+DELETE /api/projects/:projectId/apis/:id
 ```

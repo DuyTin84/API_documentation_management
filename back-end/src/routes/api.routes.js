@@ -12,7 +12,7 @@ router
   .post(apiController.createApiDoc);
 
 router
-  .route("/apis/:id")
+  .route("/projects/:projectId/apis/:id")
   .get(apiController.getApiDoc)
   .put(apiController.updateApiDoc)
   .delete(apiController.deleteApiDoc);

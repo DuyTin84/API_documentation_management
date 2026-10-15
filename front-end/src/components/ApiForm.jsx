@@ -4,6 +4,7 @@ import FieldEditor from "./FieldEditor";
 import ResponseEditor from "./ResponseEditor";
 import SelectField from "./SelectField";
 import { METHODS, STATUSES } from "../utils/constants";
+import { parseJsonInput } from "../utils/jsonValidation";
 
 const initialForm = {
   name: "",
@@ -157,8 +158,8 @@ const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => 
       validateFields(form.pathParams, "Path Params");
       validateFields(form.queryParams, "Query Params");
 
-      JSON.parse(form.requestBody || "{}");
-      form.responses.forEach((response) => {
+      parseJsonInput(form.requestBody, "Request Body");
+      form.responses.forEach((response, index) => {
         const statusCode = Number(response.statusCode);
         if (
           !Number.isInteger(statusCode) ||
@@ -169,16 +170,12 @@ const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => 
             "Status code của response phải nằm trong khoảng 100 đến 599",
           );
         }
-        JSON.parse(response.body || "{}");
+        parseJsonInput(response.body, `Body của response ${index + 1}`);
       });
 
       await onSubmit({ ...form, tag: form.tag.trim() || "General" });
     } catch (submitError) {
-      setError(
-        submitError.message === "Unexpected end of JSON input"
-          ? "Nội dung JSON không hợp lệ"
-          : submitError.message,
-      );
+      setError(submitError.message);
     }
   };
 

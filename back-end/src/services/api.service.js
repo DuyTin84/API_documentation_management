@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const ApiDoc = require("../models/ApiDoc");
 const Project = require("../models/Project");
 const { fail } = require("../utils/response");
+const { buildLiteralSearchPattern } = require("../utils/search");
 
 const VALID_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const VALID_STATUSES = ["draft", "published", "deprecated"];
@@ -157,27 +158,49 @@ const listApiDocs = async (projectId, filters, userId) => {
   await ensureProjectOwner(projectId, userId);
 
   const query = { projectId };
-  if (filters.method) query.method = filters.method;
-  if (filters.status) query.status = filters.status;
-  if (filters.tag) query.tag = filters.tag;
-  if (filters.search) {
+  if (filters.method) {
+    if (!VALID_METHODS.includes(filters.method)) {
+      fail("Method lọc không hợp lệ");
+    }
+    query.method = filters.method;
+  }
+  if (filters.status) {
+    if (!VALID_STATUSES.includes(filters.status)) {
+      fail("Trạng thái lọc không hợp lệ");
+    }
+    query.status = filters.status;
+  }
+  if (filters.tag) {
+    if (typeof filters.tag !== "string" || filters.tag.length > 80) {
+      fail("Tag lọc không hợp lệ");
+    }
+    query.tag = filters.tag;
+  }
+
+  const searchPattern = buildLiteralSearchPattern(filters.search);
+  if (searchPattern) {
     query.$or = [
-      { name: { $regex: filters.search, $options: "i" } },
-      { endpoint: { $regex: filters.search, $options: "i" } },
-      { tag: { $regex: filters.search, $options: "i" } },
+      { name: { $regex: searchPattern, $options: "i" } },
+      { endpoint: { $regex: searchPattern, $options: "i" } },
+      { tag: { $regex: searchPattern, $options: "i" } },
     ];
   }
 
   return ApiDoc.find(query).sort({ tag: 1, endpoint: 1 });
 };
 
-const getApiDoc = async (apiId, userId) => {
-  const apiDoc = await ApiDoc.findById(apiId);
+const getApiDoc = async (projectId, apiId, userId) => {
+  await ensureProjectOwner(projectId, userId);
+
+  if (!mongoose.Types.ObjectId.isValid(apiId)) {
+    fail("Tài liệu API không hợp lệ");
+  }
+
+  const apiDoc = await ApiDoc.findOne({ _id: apiId, projectId });
   if (!apiDoc) {
     fail("Không tìm thấy tài liệu API", 404);
   }
 
-  await ensureProjectOwner(apiDoc.projectId, userId);
   return apiDoc;
 };
 
@@ -190,20 +213,27 @@ const createApiDoc = async (projectId, payload, userId) => {
   });
 };
 
-const updateApiDoc = async (apiId, payload, userId) => {
-  const existing = await getApiDoc(apiId, userId);
-  const updated = await ApiDoc.findByIdAndUpdate(
-    apiId,
+const updateApiDoc = async (projectId, apiId, payload, userId) => {
+  const existing = await getApiDoc(projectId, apiId, userId);
+  const updated = await ApiDoc.findOneAndUpdate(
+    { _id: apiId, projectId: existing.projectId },
     buildApiPayload(payload, userId, existing.projectId),
     { new: true, runValidators: true }
   );
 
+  if (!updated) {
+    fail("Không tìm thấy tài liệu API", 404);
+  }
+
   return updated;
 };
 
-const deleteApiDoc = async (apiId, userId) => {
-  const apiDoc = await getApiDoc(apiId, userId);
-  await ApiDoc.findByIdAndDelete(apiDoc._id);
+const deleteApiDoc = async (projectId, apiId, userId) => {
+  const apiDoc = await getApiDoc(projectId, apiId, userId);
+  const deleted = await ApiDoc.findOneAndDelete({ _id: apiDoc._id, projectId });
+  if (!deleted) {
+    fail("Không tìm thấy tài liệu API", 404);
+  }
   return apiDoc;
 };
 
