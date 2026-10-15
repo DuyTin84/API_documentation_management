@@ -50,18 +50,12 @@ Frontend mặc định gọi API tại:
 VITE_API_URL=http://localhost:5000/api
 ```
 
-## Kiểm tra dự án
+## Dữ liệu demo
 
-Chạy kiểm thử riêng cho từng phần:
-
-```bash
-cd back-end
-npm test
-
-cd ../front-end
-npm test
-npm run build
-```
+- Tài khoản: `demo@apidoc.test`
+- Mật khẩu: `Demo@123`
+- Số project: 3
+- Số API: 12
 
 ## Tính năng MVP
 

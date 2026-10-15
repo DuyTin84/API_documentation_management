@@ -4,3 +4,4 @@ dist
 npm-debug.log
 /back-end/test/
 /front-end/test/
+/back-end/src/scripts/
