@@ -5,7 +5,7 @@ import { FIELD_TYPES } from "../utils/constants";
 const emptyField = { key: "", value: "", type: "string", required: false, description: "" };
 const fieldTypeOptions = FIELD_TYPES.map((type) => ({ value: type, label: type }));
 
-const FieldEditor = ({ title, value, onChange, showValue = false }) => {
+const FieldEditor = ({ title, value, onChange, showValue = false, requiredAlways = false }) => {
   const items = value?.length ? value : [];
 
   const updateItem = (index, key, nextValue) => {
@@ -13,7 +13,7 @@ const FieldEditor = ({ title, value, onChange, showValue = false }) => {
   };
 
   const addItem = () => {
-    onChange([...items, { ...emptyField }]);
+    onChange([...items, { ...emptyField, required: requiredAlways }]);
   };
 
   const removeItem = (index) => {
@@ -64,8 +64,10 @@ const FieldEditor = ({ title, value, onChange, showValue = false }) => {
                     <input
                       type="checkbox"
                       className="h-4 w-4 rounded border-line text-accent"
-                      checked={item.required}
+                      checked={requiredAlways || item.required}
                       onChange={(event) => updateItem(index, "required", event.target.checked)}
+                      disabled={requiredAlways}
+                      aria-label={`${item.key || `Field ${index + 1}`} bắt buộc`}
                     />
                   </td>
                   <td className="px-3 py-2">

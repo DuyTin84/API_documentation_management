@@ -226,11 +226,11 @@ const ProjectDetail = () => {
             <div className="mt-2 grid grid-cols-2 gap-2">
               <div className="relative">
                 <Filter className="pointer-events-none absolute left-3 top-2.5 text-slate-400" size={16} />
-                <SelectField value={filters.method} options={methodFilterOptions} onChange={(value) => changeFilter("method", value)} buttonClassName="pl-9" />
+                <SelectField value={filters.method} options={methodFilterOptions} onChange={(value) => changeFilter("method", value)} buttonClassName="pl-9" ariaLabel="Lọc theo method" />
               </div>
-              <SelectField value={filters.status} options={statusFilterOptions} onChange={(value) => changeFilter("status", value)} />
+              <SelectField value={filters.status} options={statusFilterOptions} onChange={(value) => changeFilter("status", value)} ariaLabel="Lọc theo trạng thái" />
             </div>
-            <SelectField className="mt-2" value={filters.tag} options={tagFilterOptions} onChange={(value) => changeFilter("tag", value)} />
+            <SelectField className="mt-2" value={filters.tag} options={tagFilterOptions} onChange={(value) => changeFilter("tag", value)} ariaLabel="Lọc theo tag" />
           </section>
         </aside>
 
@@ -301,7 +301,14 @@ const ProjectDetail = () => {
                                   <MethodBadge method={apiDoc.method} />
                                 </td>
                                 <td className="max-w-xs px-3 py-2.5">
-                                  <code className="block truncate font-bold text-ink">{apiDoc.endpoint}</code>
+                                  <Link
+                                    to={`/projects/${projectId}/apis/${apiDoc._id}`}
+                                    className="block rounded-sm font-bold text-ink hover:text-accent focus:outline-none focus:ring-2 focus:ring-accent"
+                                    onClick={(event) => event.stopPropagation()}
+                                    aria-label={`Xem chi tiết ${apiDoc.method} ${apiDoc.endpoint}`}
+                                  >
+                                    <code className="block truncate">{apiDoc.endpoint}</code>
+                                  </Link>
                                 </td>
                                 <td className="max-w-xs px-3 py-2.5">
                                   <span className="block truncate font-semibold text-slate-700">{apiDoc.name}</span>
@@ -310,7 +317,7 @@ const ProjectDetail = () => {
                                   <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{getStatusLabel(apiDoc.status)}</span>
                                 </td>
                                 <td className="px-3 py-2.5 text-right">
-                                  <button className="btn btn-muted h-8 w-8 px-0 text-rose-600 hover:bg-rose-50" onClick={(event) => deleteApi(event, apiDoc)} title="Xóa API">
+                                  <button className="btn btn-muted h-8 w-8 px-0 text-rose-600 hover:bg-rose-50" onClick={(event) => deleteApi(event, apiDoc)} title="Xóa API" aria-label={`Xóa ${apiDoc.method} ${apiDoc.endpoint}`}>
                                     <Trash2 size={16} />
                                   </button>
                                 </td>

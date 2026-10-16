@@ -22,29 +22,39 @@ const ApiDetail = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const loadDetail = async () => {
+  useEffect(() => {
+    let active = true;
     setLoading(true);
     setError("");
+    setProject(null);
+    setApiDoc(null);
+    setAvailableTags([]);
 
-    try {
-      const [projectResponse, apiResponse] = await Promise.all([
-        projectService.getProject(projectId),
-        isCreating ? Promise.resolve({ data: null }) : apiDocService.getApiDoc(projectId, apiId),
-      ]);
-      const apiDocsResponse = await apiDocService.getApiDocs(projectId);
-      setProject(projectResponse.data);
-      setApiDoc(apiResponse.data);
-      setAvailableTags([...new Set(apiDocsResponse.data.map((item) => item.tag).filter(Boolean))].sort());
-      setMode(isCreating ? "create" : "view");
-    } catch (loadError) {
-      setError(loadError.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const loadDetail = async () => {
+      try {
+        const [projectResponse, apiResponse, apiDocsResponse] = await Promise.all([
+          projectService.getProject(projectId),
+          isCreating ? Promise.resolve({ data: null }) : apiDocService.getApiDoc(projectId, apiId),
+          apiDocService.getApiDocs(projectId),
+        ]);
+        if (!active) return;
 
-  useEffect(() => {
+        setProject(projectResponse.data);
+        setApiDoc(apiResponse.data);
+        setAvailableTags([...new Set(apiDocsResponse.data.map((item) => item.tag).filter(Boolean))].sort());
+        setMode(isCreating ? "create" : "view");
+      } catch (loadError) {
+        if (active) setError(loadError.message);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
     loadDetail();
+
+    return () => {
+      active = false;
+    };
   }, [projectId, apiId, isCreating]);
 
   const submitApi = async (form) => {

@@ -122,7 +122,7 @@ const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => 
       tag: apiDoc.tag || "General",
       status: apiDoc.status || "draft",
       headers: apiDoc.headers || [],
-      pathParams: apiDoc.pathParams || [],
+      pathParams: (apiDoc.pathParams || []).map((item) => ({ ...item, required: true })),
       queryParams: apiDoc.queryParams || [],
       requestBody: formatJson(apiDoc.requestBody),
       responses:
@@ -154,11 +154,30 @@ const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => 
         throw new Error("Endpoint phải bắt đầu bằng dấu /");
       }
 
+      if (/[?#]/.test(form.endpoint)) {
+        throw new Error("Endpoint không được chứa query string hoặc fragment; hãy dùng Query Params");
+      }
+
       validateFields(form.headers, "Headers");
       validateFields(form.pathParams, "Path Params");
       validateFields(form.queryParams, "Query Params");
 
+      const pathKeys = [...form.endpoint.trim().matchAll(/\/:([A-Za-z0-9_-]+)(?=\/|$)|\{([^}/]+)\}/g)]
+        .map((match) => match[1] || match[2]);
+      if (new Set(pathKeys).size !== pathKeys.length) {
+        throw new Error("Path Params trong endpoint không được trùng tên");
+      }
+      const declaredPathKeys = form.pathParams.filter((item) => item.key?.trim()).map((item) => item.key.trim());
+      if (new Set(declaredPathKeys).size !== declaredPathKeys.length) {
+        throw new Error("Path Params không được trùng key");
+      }
+      const unusedPathKey = declaredPathKeys.find((key) => !pathKeys.includes(key));
+      if (unusedPathKey) {
+        throw new Error(`Path Param ${unusedPathKey} không có trong endpoint`);
+      }
+
       parseJsonInput(form.requestBody, "Request Body");
+      const responseCodes = new Set();
       form.responses.forEach((response, index) => {
         const statusCode = Number(response.statusCode);
         if (
@@ -170,6 +189,10 @@ const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => 
             "Status code của response phải nằm trong khoảng 100 đến 599",
           );
         }
+        if (responseCodes.has(statusCode)) {
+          throw new Error(`Status code ${statusCode} đã được khai báo`);
+        }
+        responseCodes.add(statusCode);
         parseJsonInput(response.body, `Body của response ${index + 1}`);
       });
 
@@ -258,6 +281,7 @@ const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => 
         title="Path Params"
         value={form.pathParams}
         onChange={(value) => update("pathParams", value)}
+        requiredAlways
       />
       <FieldEditor
         title="Query Params"

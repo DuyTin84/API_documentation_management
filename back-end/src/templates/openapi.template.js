@@ -1,10 +1,6 @@
 const METHODS_WITH_REQUEST_BODY = new Set(["post", "put", "patch"]);
 const RESERVED_HEADERS = new Set(["authorization", "content-type", "accept"]);
-
-const normalizeEndpoint = (value = "") => {
-  const endpoint = value.startsWith("/") ? value : `/${value}`;
-  return endpoint.replace(/:([A-Za-z0-9_-]+)/g, "{$1}");
-};
+const { normalizeEndpoint, getPathParameterKeys } = require("../utils/endpointPath");
 
 const inferSchema = (value) => {
   if (Array.isArray(value)) {
@@ -99,7 +95,7 @@ const buildParameter = (field, location) => {
 };
 
 const buildPathParameters = (endpoint, pathParams = []) => {
-  const pathKeys = [...endpoint.matchAll(/\{([^}/]+)\}/g)].map((match) => match[1]);
+  const pathKeys = getPathParameterKeys(endpoint);
 
   return pathKeys.map((key) => {
     const documentedParam = pathParams.find((item) => item.key === key);
@@ -116,27 +112,36 @@ const buildResponses = (responses = []) => {
   const responseItems = responses.length
     ? responses
     : [{ statusCode: 200, description: "Phản hồi thành công", body: {} }];
-
-  return responseItems.reduce((result, response) => {
+  const grouped = responseItems.reduce((result, response) => {
     const statusCode = String(response.statusCode || 200);
-    const responseObject = {
-      description: response.description || "Response",
-    };
-
-    if (statusCode !== "204") {
-      const body = response.body ?? {};
-      responseObject.content = {
-        "application/json": buildMediaType(body),
-      };
-    }
-
-    result[statusCode] = responseObject;
+    result[statusCode] = result[statusCode] || [];
+    result[statusCode].push(response);
     return result;
   }, {});
+
+  return Object.fromEntries(Object.entries(grouped).map(([statusCode, variants]) => {
+    const responseObject = { description: variants[0].description || "Response" };
+
+    if (statusCode !== "204") {
+      const bodies = variants.map((variant) => variant.body ?? {});
+      const mediaType = variants.length === 1
+        ? buildMediaType(bodies[0])
+        : {
+          schema: { anyOf: bodies.map(inferSchema) },
+          examples: Object.fromEntries(variants.map((variant, index) => [
+            `example${index + 1}`,
+            { summary: variant.description || `Ví dụ ${index + 1}`, value: bodies[index] },
+          ])),
+        };
+      responseObject.content = { "application/json": mediaType };
+    }
+
+    return [statusCode, responseObject];
+  }));
 };
 
 const buildOpenApiDocument = (project, apiDocs = []) => {
-  let usesBearerAuth = false;
+  const securitySchemes = {};
 
   const paths = apiDocs.reduce((result, api) => {
     const endpoint = normalizeEndpoint(api.endpoint);
@@ -170,10 +175,25 @@ const buildOpenApiDocument = (project, apiDocs = []) => {
     }
 
     if (authorizationHeader) {
-      usesBearerAuth = true;
+      const authValue = String(authorizationHeader.value || "").trim();
+      let schemeName = "authorizationHeader";
+      let scheme = { type: "apiKey", in: "header", name: "Authorization" };
+
+      if (/^Bearer(?:\s|$)/i.test(authValue)) {
+        schemeName = "bearerAuth";
+        scheme = { type: "http", scheme: "bearer" };
+        if (/\bJWT\b/i.test(`${authValue} ${authorizationHeader.description || ""}`)) {
+          scheme.bearerFormat = "JWT";
+        }
+      } else if (/^Basic(?:\s|$)/i.test(authValue)) {
+        schemeName = "basicAuth";
+        scheme = { type: "http", scheme: "basic" };
+      }
+
+      securitySchemes[schemeName] = scheme;
       operation.security = authorizationHeader.required
-        ? [{ bearerAuth: [] }]
-        : [{}, { bearerAuth: [] }];
+        ? [{ [schemeName]: [] }]
+        : [{}, { [schemeName]: [] }];
     }
 
     if (api.status === "deprecated") {
@@ -219,16 +239,8 @@ const buildOpenApiDocument = (project, apiDocs = []) => {
     document.tags = tags;
   }
 
-  if (usesBearerAuth) {
-    document.components = {
-      securitySchemes: {
-        bearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
-        },
-      },
-    };
+  if (Object.keys(securitySchemes).length) {
+    document.components = { securitySchemes };
   }
 
   return document;

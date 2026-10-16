@@ -3,6 +3,7 @@ const ApiDoc = require("../models/ApiDoc");
 const Project = require("../models/Project");
 const { fail } = require("../utils/response");
 const { buildLiteralSearchPattern } = require("../utils/search");
+const { getPathParameterKeys } = require("../utils/endpointPath");
 
 const VALID_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const VALID_STATUSES = ["draft", "published", "deprecated"];
@@ -77,6 +78,8 @@ const normalizeResponses = (items = []) => {
     return [{ statusCode: 200, description: "Phản hồi thành công", body: {} }];
   }
 
+  const statusCodes = new Set();
+
   return items.filter(Boolean).map((item) => {
     const statusCode = Number(item.statusCode);
     const description = item.description?.trim() || "";
@@ -84,6 +87,11 @@ const normalizeResponses = (items = []) => {
     if (!Number.isInteger(statusCode) || statusCode < 100 || statusCode > 599) {
       fail("Status code của response phải nằm trong khoảng 100 đến 599");
     }
+
+    if (statusCodes.has(statusCode)) {
+      fail(`Status code ${statusCode} đã được khai báo`);
+    }
+    statusCodes.add(statusCode);
 
     if (description.length > 500) {
       fail("Mô tả response không được vượt quá 500 ký tự");
@@ -129,6 +137,10 @@ const buildApiPayload = (payload, userId, projectId) => {
     fail("Endpoint không được vượt quá 200 ký tự");
   }
 
+  if (/[?#]/.test(endpoint)) {
+    fail("Endpoint không được chứa query string hoặc fragment; hãy dùng Query Params");
+  }
+
   if (tag.length > 80) {
     fail("Tag/module không được vượt quá 80 ký tự");
   }
@@ -136,6 +148,30 @@ const buildApiPayload = (payload, userId, projectId) => {
   if (!VALID_STATUSES.includes(status)) {
     fail("Trạng thái API không hợp lệ");
   }
+
+  const pathKeys = getPathParameterKeys(endpoint);
+  if (new Set(pathKeys).size !== pathKeys.length) {
+    fail("Path Params trong endpoint không được trùng tên");
+  }
+
+  const providedPathParams = normalizeFields(payload.pathParams);
+  if (new Set(providedPathParams.map((item) => item.key)).size !== providedPathParams.length) {
+    fail("Path Params không được trùng key");
+  }
+  const unusedPathParam = providedPathParams.find((item) => !pathKeys.includes(item.key));
+  if (unusedPathParam) {
+    fail(`Path Param ${unusedPathParam.key} không có trong endpoint`);
+  }
+
+  const pathParams = pathKeys.map((key) => ({
+    ...(providedPathParams.find((item) => item.key === key) || {
+      key,
+      value: "",
+      type: "string",
+      description: "",
+    }),
+    required: true,
+  }));
 
   return {
     projectId,
@@ -147,7 +183,7 @@ const buildApiPayload = (payload, userId, projectId) => {
     status,
     headers: normalizeFields(payload.headers),
     queryParams: normalizeFields(payload.queryParams),
-    pathParams: normalizeFields(payload.pathParams),
+    pathParams,
     requestBody: normalizeJson(payload.requestBody, {}),
     responses: normalizeResponses(payload.responses),
     updatedBy: userId,

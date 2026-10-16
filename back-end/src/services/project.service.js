@@ -97,16 +97,29 @@ const updateProject = async (projectId, payload, userId) => {
 };
 
 const deleteProject = async (projectId, userId) => {
-  if (!mongoose.Types.ObjectId.isValid(projectId)) {
-    fail("Project không hợp lệ");
+  const project = await getProject(projectId, userId);
+  const filter = { _id: project._id, createdBy: userId };
+  const session = await mongoose.startSession();
+
+  try {
+    await session.withTransaction(async () => {
+      await ApiDoc.deleteMany({ projectId: project._id }).session(session);
+      const deleted = await Project.findOneAndDelete(filter).session(session);
+      if (!deleted) fail("Không tìm thấy project", 404);
+    });
+  } catch (error) {
+    if (error.code !== 20 || !/Transaction numbers are only allowed/.test(error.message)) {
+      throw error;
+    }
+
+    // MongoDB standalone không hỗ trợ transaction; giữ project nếu bước xóa API thất bại.
+    await ApiDoc.deleteMany({ projectId: project._id });
+    const deleted = await Project.findOneAndDelete(filter);
+    if (!deleted) fail("Không tìm thấy project", 404);
+  } finally {
+    await session.endSession();
   }
 
-  const project = await Project.findOneAndDelete({ _id: projectId, createdBy: userId });
-  if (!project) {
-    fail("Không tìm thấy project", 404);
-  }
-
-  await ApiDoc.deleteMany({ projectId });
   return project;
 };
 

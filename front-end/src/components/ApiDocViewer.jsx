@@ -8,7 +8,7 @@ const hasJsonContent = (value) => {
   return value !== undefined && value !== null && value !== "";
 };
 
-const FieldTable = ({ title, rows, showValue = false }) => (
+const FieldTable = ({ title, rows, showValue = false, requiredAlways = false }) => (
   <section>
     <h3 className="mb-2 text-sm font-bold text-ink">{title}</h3>
     <div className="overflow-x-auto rounded-md border border-line bg-white">
@@ -29,7 +29,7 @@ const FieldTable = ({ title, rows, showValue = false }) => (
                 <td className="px-3 py-2 font-semibold">{row.key}</td>
                 {showValue ? <td className="px-3 py-2 font-mono text-xs">{row.value || "-"}</td> : null}
                 <td className="px-3 py-2">{row.type || "string"}</td>
-                <td className="px-3 py-2">{row.required ? "Có" : "Không"}</td>
+                <td className="px-3 py-2">{requiredAlways || row.required ? "Có" : "Không"}</td>
                 <td className="px-3 py-2 text-slate-600">{row.description || "-"}</td>
               </tr>
             ))
@@ -64,7 +64,7 @@ const ApiDocViewer = ({ apiDoc }) => {
       </div>
 
       {apiDoc.headers?.length ? <FieldTable title="Headers" rows={apiDoc.headers} showValue /> : null}
-      {apiDoc.pathParams?.length ? <FieldTable title="Path Params" rows={apiDoc.pathParams} /> : null}
+      {apiDoc.pathParams?.length ? <FieldTable title="Path Params" rows={apiDoc.pathParams} requiredAlways /> : null}
       {apiDoc.queryParams?.length ? <FieldTable title="Query Params" rows={apiDoc.queryParams} /> : null}
 
       {hasJsonContent(apiDoc.requestBody) ? (

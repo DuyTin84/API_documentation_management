@@ -1,5 +1,6 @@
 import { CheckCircle2, Info, TriangleAlert, X, XCircle } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import AccessibleModal from "../components/AccessibleModal";
 
 const FeedbackContext = createContext(null);
 
@@ -100,7 +101,7 @@ export const FeedbackProvider = ({ children }) => {
                   <p className="text-sm font-bold">{item.title}</p>
                   {item.message ? <p className="mt-1 text-sm leading-5 opacity-80">{item.message}</p> : null}
                 </div>
-                <button type="button" className="rounded p-1 opacity-70 hover:bg-white/60 hover:opacity-100" onClick={() => removeToast(item.id)}>
+                <button type="button" className="rounded p-1 opacity-70 hover:bg-white/60 hover:opacity-100" onClick={() => removeToast(item.id)} aria-label="Đóng thông báo" title="Đóng thông báo">
                   <X size={15} />
                 </button>
               </div>
@@ -110,10 +111,9 @@ export const FeedbackProvider = ({ children }) => {
       </div>
 
       {confirmState ? (
-        <div className="modal-backdrop z-[110]" onMouseDown={() => closeConfirm(false)}>
-          <div className="modal-panel max-w-md" onMouseDown={(event) => event.stopPropagation()}>
+        <AccessibleModal titleId="confirm-dialog-title" onClose={() => closeConfirm(false)} panelClassName="max-w-md">
             <div className="border-b border-line px-5 py-4">
-              <h2 className="text-lg font-black text-ink">{confirmState.title}</h2>
+              <h2 id="confirm-dialog-title" className="text-lg font-black text-ink">{confirmState.title}</h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">{confirmState.message}</p>
             </div>
             <div className="flex justify-end gap-3 bg-panel px-5 py-4">
@@ -128,8 +128,7 @@ export const FeedbackProvider = ({ children }) => {
                 {confirmState.confirmText}
               </button>
             </div>
-          </div>
-        </div>
+        </AccessibleModal>
       ) : null}
     </FeedbackContext.Provider>
   );

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Edit3, Plus, Search, Trash2, X } from "lucide-react";
 import AppLayout from "../layouts/AppLayout";
+import AccessibleModal from "../components/AccessibleModal";
 import EmptyState from "../components/EmptyState";
 import { useFeedback } from "../hooks/useFeedback";
 import * as projectService from "../services/projectService";
@@ -49,13 +50,6 @@ const Dashboard = () => {
   useEffect(() => {
     loadProjects();
   }, []);
-
-  useEffect(() => {
-    document.body.style.overflow = isFormOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isFormOpen]);
 
   const closeProjectForm = () => {
     setForm(initialForm);
@@ -298,16 +292,10 @@ const Dashboard = () => {
       </section>
 
       {isFormOpen ? (
-        <div className="modal-backdrop" onMouseDown={closeProjectForm}>
-          <form
-            className="modal-panel"
-            onSubmit={submit}
-            onMouseDown={(event) => event.stopPropagation()}
-            noValidate
-          >
+        <AccessibleModal titleId="project-dialog-title" onClose={closeProjectForm} asForm onSubmit={submit}>
             <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
               <div>
-                <h2 className="text-xl font-black text-ink">
+                <h2 id="project-dialog-title" className="text-xl font-black text-ink">
                   {editingProject ? "Chỉnh sửa project" : "Tạo project"}
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
@@ -391,8 +379,7 @@ const Dashboard = () => {
                     : "Tạo project"}
               </button>
             </div>
-          </form>
-        </div>
+        </AccessibleModal>
       ) : null}
     </AppLayout>
   );
