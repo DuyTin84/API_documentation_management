@@ -1,6 +1,7 @@
 const METHODS_WITH_REQUEST_BODY = new Set(["post", "put", "patch"]);
 const RESERVED_HEADERS = new Set(["authorization", "content-type", "accept"]);
 const { normalizeEndpoint, getPathParameterKeys } = require("../utils/endpointPath");
+const { fail } = require("../utils/response");
 
 const inferSchema = (value) => {
   if (Array.isArray(value)) {
@@ -123,7 +124,7 @@ const buildResponses = (responses = []) => {
     const responseObject = { description: variants[0].description || "Response" };
 
     if (statusCode !== "204") {
-      const bodies = variants.map((variant) => variant.body ?? {});
+      const bodies = variants.map((variant) => variant.body === undefined ? {} : variant.body);
       const mediaType = variants.length === 1
         ? buildMediaType(bodies[0])
         : {
@@ -146,6 +147,9 @@ const buildOpenApiDocument = (project, apiDocs = []) => {
   const paths = apiDocs.reduce((result, api) => {
     const endpoint = normalizeEndpoint(api.endpoint);
     const method = api.method.toLowerCase();
+    if (result[endpoint]?.[method]) {
+      fail(`Không thể xuất OpenAPI: API ${api.method} ${endpoint} bị trùng sau khi chuẩn hóa`, 409);
+    }
     const headers = api.headers || [];
     const authorizationHeader = headers.find(
       (header) => header.key?.toLowerCase() === "authorization"
@@ -200,8 +204,8 @@ const buildOpenApiDocument = (project, apiDocs = []) => {
       operation.deprecated = true;
     }
 
-    if (METHODS_WITH_REQUEST_BODY.has(method) || Object.keys(api.requestBody || {}).length) {
-      const requestBody = api.requestBody ?? {};
+    const requestBody = api.requestBody === undefined ? {} : api.requestBody;
+    if (METHODS_WITH_REQUEST_BODY.has(method) || api.requestBody === null || Object.keys(requestBody).length) {
       operation.requestBody = {
         content: {
           "application/json": buildMediaType(requestBody),

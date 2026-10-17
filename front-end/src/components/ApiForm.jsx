@@ -3,8 +3,9 @@ import { Save, X } from "lucide-react";
 import FieldEditor from "./FieldEditor";
 import ResponseEditor from "./ResponseEditor";
 import SelectField from "./SelectField";
+import { useFeedback } from "../hooks/useFeedback";
 import { METHODS, STATUSES } from "../utils/constants";
-import { parseJsonInput } from "../utils/jsonValidation";
+import { formatJsonValue, parseJsonInput } from "../utils/jsonValidation";
 
 const initialForm = {
   name: "",
@@ -21,8 +22,6 @@ const initialForm = {
     { statusCode: 200, description: "Phản hồi thành công", body: "{\n  \n}" },
   ],
 };
-
-const formatJson = (value) => JSON.stringify(value ?? {}, null, 2);
 
 const validateFields = (items, label) => {
   items.forEach((item) => {
@@ -107,6 +106,7 @@ const TagInput = ({ value, options, onChange }) => {
 const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => {
   const [form, setForm] = useState(initialForm);
   const [error, setError] = useState("");
+  const { toast } = useFeedback();
 
   useEffect(() => {
     if (!apiDoc) {
@@ -124,11 +124,11 @@ const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => 
       headers: apiDoc.headers || [],
       pathParams: (apiDoc.pathParams || []).map((item) => ({ ...item, required: true })),
       queryParams: apiDoc.queryParams || [],
-      requestBody: formatJson(apiDoc.requestBody),
+      requestBody: formatJsonValue(apiDoc.requestBody),
       responses:
         apiDoc.responses?.map((response) => ({
           ...response,
-          body: formatJson(response.body),
+          body: formatJsonValue(response.body),
         })) || initialForm.responses,
     });
   }, [apiDoc]);
@@ -199,6 +199,7 @@ const ApiForm = ({ apiDoc, availableTags = [], onSubmit, onCancel, saving }) => 
       await onSubmit({ ...form, tag: form.tag.trim() || "General" });
     } catch (submitError) {
       setError(submitError.message);
+      toast.error(apiDoc ? "Cập nhật API thất bại" : "Tạo API thất bại", submitError.message);
     }
   };
 

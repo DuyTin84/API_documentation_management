@@ -49,13 +49,23 @@ const SelectField = ({
   useLayoutEffect(() => {
     if (open) {
       updateMenuPosition();
-      menuRef.current?.focus();
+      menuRef.current?.focus({ preventScroll: true });
     }
   }, [open, value, options.length]);
 
   useEffect(() => {
     if (open) {
-      menuRef.current?.querySelector(`[data-option-index="${activeIndex}"]`)?.scrollIntoView({ block: "nearest" });
+      const menu = menuRef.current;
+      const option = menu?.querySelector(`[data-option-index="${activeIndex}"]`);
+      if (!option) return;
+
+      const menuBounds = menu.getBoundingClientRect();
+      const optionBounds = option.getBoundingClientRect();
+      if (optionBounds.top < menuBounds.top) {
+        menu.scrollTop -= menuBounds.top - optionBounds.top;
+      } else if (optionBounds.bottom > menuBounds.bottom) {
+        menu.scrollTop += optionBounds.bottom - menuBounds.bottom;
+      }
     }
   }, [open, activeIndex]);
 
@@ -72,7 +82,7 @@ const SelectField = ({
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         setOpen(false);
-        buttonRef.current?.focus();
+        buttonRef.current?.focus({ preventScroll: true });
       }
     };
 
@@ -98,7 +108,7 @@ const SelectField = ({
   const chooseOption = (nextValue) => {
     onChange(nextValue);
     setOpen(false);
-    buttonRef.current?.focus();
+    buttonRef.current?.focus({ preventScroll: true });
   };
 
   const openMenu = () => {
@@ -122,7 +132,7 @@ const SelectField = ({
       event.preventDefault();
       event.stopPropagation();
       setOpen(false);
-      buttonRef.current?.focus();
+      buttonRef.current?.focus({ preventScroll: true });
     }
   };
 
@@ -156,7 +166,7 @@ const SelectField = ({
           id={listboxId}
           data-select-menu
           className={`overflow-auto rounded-md border border-line bg-white p-1 shadow-xl ${menuClassName}`}
-          style={menuStyle}
+          style={{ position: "fixed", ...menuStyle }}
           role="listbox"
           tabIndex={-1}
           aria-label={ariaLabel || placeholder}

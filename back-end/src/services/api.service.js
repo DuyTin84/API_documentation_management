@@ -3,7 +3,7 @@ const ApiDoc = require("../models/ApiDoc");
 const Project = require("../models/Project");
 const { fail } = require("../utils/response");
 const { buildLiteralSearchPattern } = require("../utils/search");
-const { getPathParameterKeys } = require("../utils/endpointPath");
+const { getPathParameterKeys, normalizeEndpoint } = require("../utils/endpointPath");
 
 const VALID_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const VALID_STATUSES = ["draft", "published", "deprecated"];
@@ -23,7 +23,7 @@ const ensureProjectOwner = async (projectId, userId) => {
 };
 
 const normalizeJson = (value, fallback) => {
-  if (value === undefined || value === null || value === "") {
+  if (value === undefined || value === "") {
     return fallback;
   }
 
@@ -39,12 +39,23 @@ const normalizeJson = (value, fallback) => {
 };
 
 const normalizeFields = (items = []) => {
+  if (items == null) return [];
   if (!Array.isArray(items)) {
-    return [];
+    fail("Danh sách header/params không hợp lệ");
   }
 
   return items
-    .filter((item) => item && (item.key || item.value || item.description))
+    .filter((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        fail("Field header/params không hợp lệ");
+      }
+      if (["key", "value", "type", "description"].some(
+        (key) => item[key] != null && typeof item[key] !== "string"
+      )) {
+        fail("Key, value, kiểu và mô tả header/params phải là chuỗi");
+      }
+      return item.key || item.value || item.description;
+    })
     .map((item) => ({
       key: item.key?.trim(),
       value: item.value || "",
@@ -74,13 +85,22 @@ const normalizeFields = (items = []) => {
 };
 
 const normalizeResponses = (items = []) => {
-  if (!Array.isArray(items) || items.length === 0) {
+  if (items == null || (Array.isArray(items) && items.length === 0)) {
     return [{ statusCode: 200, description: "Phản hồi thành công", body: {} }];
+  }
+  if (!Array.isArray(items)) {
+    fail("Danh sách response không hợp lệ");
   }
 
   const statusCodes = new Set();
 
-  return items.filter(Boolean).map((item) => {
+  return items.map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      fail("Response không hợp lệ");
+    }
+    if (item.description != null && typeof item.description !== "string") {
+      fail("Mô tả response phải là chuỗi");
+    }
     const statusCode = Number(item.statusCode);
     const description = item.description?.trim() || "";
 
@@ -106,6 +126,14 @@ const normalizeResponses = (items = []) => {
 };
 
 const buildApiPayload = (payload, userId, projectId) => {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    fail("Dữ liệu API không hợp lệ");
+  }
+  if (["name", "description", "endpoint", "tag"].some(
+    (key) => payload[key] != null && typeof payload[key] !== "string"
+  )) {
+    fail("Tên, mô tả, endpoint và tag phải là chuỗi");
+  }
   const name = payload.name?.trim();
   const description = payload.description?.trim() || "";
   const method = payload.method;
@@ -190,6 +218,16 @@ const buildApiPayload = (payload, userId, projectId) => {
   };
 };
 
+const ensureUniqueOperation = async (projectId, method, endpoint, excludedId) => {
+  const apiDocs = await ApiDoc.find({ projectId, method }).select("_id endpoint");
+  const normalizedEndpoint = normalizeEndpoint(endpoint);
+  if (apiDocs.some((apiDoc) =>
+    String(apiDoc._id) !== String(excludedId) && normalizeEndpoint(apiDoc.endpoint) === normalizedEndpoint
+  )) {
+    fail(`API ${method} ${normalizedEndpoint} đã tồn tại trong project`, 409);
+  }
+};
+
 const listApiDocs = async (projectId, filters, userId) => {
   await ensureProjectOwner(projectId, userId);
 
@@ -242,18 +280,22 @@ const getApiDoc = async (projectId, apiId, userId) => {
 
 const createApiDoc = async (projectId, payload, userId) => {
   await ensureProjectOwner(projectId, userId);
+  const data = buildApiPayload(payload, userId, projectId);
+  await ensureUniqueOperation(projectId, data.method, data.endpoint);
 
   return ApiDoc.create({
-    ...buildApiPayload(payload, userId, projectId),
+    ...data,
     createdBy: userId,
   });
 };
 
 const updateApiDoc = async (projectId, apiId, payload, userId) => {
   const existing = await getApiDoc(projectId, apiId, userId);
+  const data = buildApiPayload(payload, userId, existing.projectId);
+  await ensureUniqueOperation(existing.projectId, data.method, data.endpoint, existing._id);
   const updated = await ApiDoc.findOneAndUpdate(
     { _id: apiId, projectId: existing.projectId },
-    buildApiPayload(payload, userId, existing.projectId),
+    data,
     { new: true, runValidators: true }
   );
 

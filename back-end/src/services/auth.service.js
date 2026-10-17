@@ -12,7 +12,16 @@ const sanitizeUser = (user) => ({
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const register = async ({ name, email, password, confirmPassword }) => {
+const register = async (payload) => {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    fail("Dữ liệu đăng ký không hợp lệ");
+  }
+  const { name, email, password, confirmPassword } = payload;
+  if ([name, email, password, confirmPassword].some(
+    (value) => value != null && typeof value !== "string"
+  )) {
+    fail("Thông tin đăng ký phải là chuỗi");
+  }
   const normalizedName = name?.trim();
   const normalizedEmail = email?.trim().toLowerCase();
 
@@ -53,7 +62,14 @@ const register = async ({ name, email, password, confirmPassword }) => {
   };
 };
 
-const login = async ({ email, password }) => {
+const login = async (payload) => {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    fail("Dữ liệu đăng nhập không hợp lệ");
+  }
+  const { email, password } = payload;
+  if ([email, password].some((value) => value != null && typeof value !== "string")) {
+    fail("Email và mật khẩu phải là chuỗi");
+  }
   const normalizedEmail = email?.trim().toLowerCase();
 
   if (!normalizedEmail || !password) {

@@ -5,3 +5,9 @@ export const parseJsonInput = (value, fieldName = "Nội dung") => {
     throw new Error(`${fieldName} phải là JSON hợp lệ`);
   }
 };
+
+export const formatJsonValue = (value) => JSON.stringify(
+  value === undefined ? {} : value,
+  null,
+  2,
+);

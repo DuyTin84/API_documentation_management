@@ -25,6 +25,14 @@ const listProjects = async (userId) => {
 };
 
 const normalizeProjectPayload = (payload) => {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    fail("Dữ liệu project không hợp lệ");
+  }
+  if (["name", "description", "baseUrl"].some(
+    (key) => payload[key] != null && typeof payload[key] !== "string"
+  )) {
+    fail("Tên, mô tả và Base URL phải là chuỗi");
+  }
   const name = payload.name?.trim();
   const description = payload.description?.trim() || "";
   const baseUrl = payload.baseUrl?.trim() || "";

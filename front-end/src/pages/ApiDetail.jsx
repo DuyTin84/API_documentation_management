@@ -81,10 +81,6 @@ const ApiDetail = () => {
         return;
       }
       setMode("view");
-    } catch (submitError) {
-      setError(submitError.message);
-      toast.error(isCreating ? "Tạo API thất bại" : "Cập nhật API thất bại", submitError.message);
-      throw submitError;
     } finally {
       setSaving(false);
     }

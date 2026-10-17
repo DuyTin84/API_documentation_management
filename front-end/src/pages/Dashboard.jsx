@@ -24,16 +24,17 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const searchKeyword = search.trim().toLowerCase();
+  const noSearchMatches = Boolean(searchKeyword && projects.length);
 
   const filteredProjects = useMemo(() => {
     return projects.filter((project) => {
-      const keyword = search.toLowerCase();
       return (
-        project.name.toLowerCase().includes(keyword) ||
-        project.description.toLowerCase().includes(keyword)
+        project.name.toLowerCase().includes(searchKeyword) ||
+        (project.description || "").toLowerCase().includes(searchKeyword)
       );
     });
-  }, [projects, search]);
+  }, [projects, searchKeyword]);
 
   const loadProjects = async () => {
     setLoading(true);
@@ -208,12 +209,17 @@ const Dashboard = () => {
           </div>
         ) : filteredProjects.length === 0 ? (
           <EmptyState
-            title="Chưa có project"
-            description="Tạo project tài liệu API đầu tiên để bắt đầu thêm endpoint."
+            title={noSearchMatches ? "Không tìm thấy project phù hợp" : "Chưa có project"}
+            description={noSearchMatches
+              ? "Thử từ khóa khác hoặc xóa tìm kiếm để xem toàn bộ project."
+              : "Tạo project tài liệu API đầu tiên để bắt đầu thêm endpoint."}
             action={
-              <button className="btn btn-primary" onClick={openCreateProject}>
-                <Plus size={17} />
-                Tạo project
+              <button
+                className={noSearchMatches ? "btn btn-muted" : "btn btn-primary"}
+                onClick={noSearchMatches ? () => setSearch("") : openCreateProject}
+              >
+                {noSearchMatches ? <X size={17} /> : <Plus size={17} />}
+                {noSearchMatches ? "Xóa tìm kiếm" : "Tạo project"}
               </button>
             }
           />
